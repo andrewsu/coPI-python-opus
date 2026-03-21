@@ -20,17 +20,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create enum types
-    op.execute("CREATE TYPE author_position_enum AS ENUM ('first', 'last', 'middle')")
-    op.execute("CREATE TYPE job_type_enum AS ENUM ('generate_profile', 'monthly_refresh')")
-    op.execute(
-        "CREATE TYPE job_status_enum AS ENUM ('pending', 'processing', 'completed', 'failed', 'dead')"
-    )
-    op.execute(
-        "CREATE TYPE sim_run_status_enum AS ENUM ('running', 'completed', 'stopped')"
-    )
-    op.execute("CREATE TYPE agent_message_phase_enum AS ENUM ('decide', 'respond')")
-    op.execute("CREATE TYPE channel_type_enum AS ENUM ('thematic', 'collaboration')")
 
     # Users table
     op.create_table(
@@ -117,7 +106,7 @@ def upgrade() -> None:
         sa.Column(
             "author_position",
             sa.Enum(
-                "first", "last", "middle", name="author_position_enum", create_type=False
+                "first", "last", "middle", name="author_position_enum", create_type=True
             ),
             nullable=True,
         ),
@@ -139,7 +128,7 @@ def upgrade() -> None:
         sa.Column(
             "type",
             sa.Enum(
-                "generate_profile", "monthly_refresh", name="job_type_enum", create_type=False
+                "generate_profile", "monthly_refresh", name="job_type_enum", create_type=True
             ),
             nullable=False,
         ),
@@ -152,7 +141,7 @@ def upgrade() -> None:
                 "failed",
                 "dead",
                 name="job_status_enum",
-                create_type=False,
+                create_type=True,
             ),
             default="pending",
             nullable=False,
@@ -197,7 +186,7 @@ def upgrade() -> None:
                 "completed",
                 "stopped",
                 name="sim_run_status_enum",
-                create_type=False,
+                create_type=True,
             ),
             default="running",
             nullable=False,
@@ -225,7 +214,7 @@ def upgrade() -> None:
         sa.Column(
             "phase",
             sa.Enum(
-                "decide", "respond", name="agent_message_phase_enum", create_type=False
+                "decide", "respond", name="agent_message_phase_enum", create_type=True
             ),
             nullable=False,
         ),
@@ -253,7 +242,7 @@ def upgrade() -> None:
         sa.Column(
             "channel_type",
             sa.Enum(
-                "thematic", "collaboration", name="channel_type_enum", create_type=False
+                "thematic", "collaboration", name="channel_type_enum", create_type=True
             ),
             nullable=False,
         ),
