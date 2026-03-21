@@ -297,7 +297,7 @@ async def admin_activity_detail(
     )
 
 
-@router.post("/api/admin/impersonate")
+@router.post("/impersonate")
 async def impersonate_user(
     request: Request,
     orcid: str = Form(...),
@@ -344,7 +344,7 @@ async def impersonate_user(
     return response
 
 
-@router.post("/api/admin/impersonate/stop")
+@router.post("/impersonate/stop")
 async def stop_impersonating(
     request: Request,
     current_user: User = Depends(get_current_user),
