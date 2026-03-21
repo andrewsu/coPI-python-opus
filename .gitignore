@@ -1,40 +1,47 @@
 # Python
 __pycache__/
-*.py[cod]
+*.pyc
 *.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
 .venv/
 venv/
 env/
-dist/
-build/
-*.egg-info/
-.eggs/
 
-# Environment
+# Environment variables (NEVER commit)
 .env
 .env.local
 .env.*.local
 
 # Database
 *.db
-*.sqlite
+*.sqlite3
 
 # Logs
-logs/
-*.log
+logs/*.json
+logs/*.log
 
 # IDE
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
 
-# OS
+# macOS
 .DS_Store
-Thumbs.db
 
-# Agent working memory (private, not committed)
-profiles/private/
+# Docker
+.docker/
 
-# Alembic (generated, committed separately)
-# alembic/versions/  # keep this
+# pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
