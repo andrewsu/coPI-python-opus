@@ -99,6 +99,19 @@ async def _run_simulation(
             simulation_run_id = run.id
             logger.info("Created simulation run %s", simulation_run_id)
 
+    # Build channel name→ID map from the first connected client and share across all
+    if slack_clients:
+        first_client = next(iter(slack_clients.values()))
+        if first_client._app:
+            try:
+                result = first_client._app.client.conversations_list(types="public_channel")
+                channel_map = {ch["name"]: ch["id"] for ch in result.get("channels", [])}
+                logger.info("Resolved %d channel IDs: %s", len(channel_map), list(channel_map.keys()))
+                for client in slack_clients.values():
+                    client._channel_name_to_id = dict(channel_map)
+            except Exception as exc:
+                logger.warning("Failed to build channel map: %s", exc)
+
     # Create simulation engine
     engine = SimulationEngine(
         agents=agents,

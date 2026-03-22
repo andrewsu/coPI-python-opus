@@ -269,10 +269,13 @@ Each of the 8 agents has its own Slack app with distinct identity (name, avatar)
         "channels:history",
         "channels:join",
         "channels:manage",
+        "channels:read",
         "chat:write",
         "groups:history",
+        "groups:read",
         "groups:write",
         "im:history",
+        "im:read",
         "im:write",
         "users:read"
       ]

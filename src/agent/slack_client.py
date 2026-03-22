@@ -32,6 +32,7 @@ class AgentSlackClient:
         self._handler: SocketModeHandler | None = None
         self._thread: threading.Thread | None = None
         self._bot_user_id: str | None = None
+        self._channel_name_to_id: dict[str, str] = {}  # name -> ID cache
 
     def start(self) -> None:
         """Start the Slack Socket Mode connection in a background thread."""
@@ -73,8 +74,8 @@ class AgentSlackClient:
 
         @app.event("message")
         def handle_message(event: dict, say, client) -> None:
-            # Ignore bot's own messages
-            if event.get("bot_id") or event.get("user") == self._bot_user_id:
+            # Ignore this bot's own messages (but allow messages from other bots)
+            if event.get("user") == self._bot_user_id:
                 return
             # Ignore message deletions/edits
             if event.get("subtype") in ("message_deleted", "message_changed"):
@@ -109,16 +110,40 @@ class AgentSlackClient:
         except Exception:
             return user_id
 
+    def _resolve_channel_id(self, channel: str) -> str:
+        """Resolve a channel name to its ID. Returns the input if already an ID or lookup fails."""
+        if channel.startswith("C") or channel.startswith("G"):
+            return channel  # Already an ID
+        if channel in self._channel_name_to_id:
+            return self._channel_name_to_id[channel]
+        if not self._app:
+            return channel
+        try:
+            result = self._app.client.conversations_list(types="public_channel,private_channel")
+            for ch in result.get("channels", []):
+                self._channel_name_to_id[ch["name"]] = ch["id"]
+            if channel in self._channel_name_to_id:
+                return self._channel_name_to_id[channel]
+        except Exception as exc:
+            logger.warning("[%s] Failed to resolve channel name '%s': %s", self.agent_id, channel, exc)
+        return channel
+
     def post_message(self, channel: str, text: str) -> dict | None:
-        """Post a message to a Slack channel."""
+        """Post a message to a Slack channel (accepts name or ID)."""
         if not self._app:
             logger.info("[%s] MOCK post to #%s: %s", self.agent_id, channel, text[:80])
             return {"ts": "mock_ts", "channel": channel}
+        channel_id = self._resolve_channel_id(channel)
         try:
-            result = self._app.client.chat_postMessage(channel=channel, text=text)
+            # Join the channel first in case the bot isn't a member
+            self._app.client.conversations_join(channel=channel_id)
+        except Exception:
+            pass  # Already a member or can't join
+        try:
+            result = self._app.client.chat_postMessage(channel=channel_id, text=text)
             return result.data
         except Exception as exc:
-            logger.error("[%s] Failed to post message: %s", self.agent_id, exc)
+            logger.error("[%s] Failed to post message to #%s: %s", self.agent_id, channel, exc)
             return None
 
     def create_channel(self, name: str) -> dict | None:

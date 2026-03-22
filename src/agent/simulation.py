@@ -77,16 +77,16 @@ class SimulationEngine:
             self.budget_cap,
         )
 
-        # Register message handlers
+        # Register message handlers — capture the event loop now since Slack Bolt
+        # handlers run in thread pool threads that don't have an event loop.
+        loop = asyncio.get_running_loop()
         for agent_id, client in self.slack_clients.items():
             if hasattr(client, "on_message"):
-                original_on_message = client.on_message
-                # Wrap to push into async queue
                 def make_handler(aid):
                     def handler(msg):
                         asyncio.run_coroutine_threadsafe(
                             self._message_queue.put(msg),
-                            asyncio.get_event_loop(),
+                            loop,
                         )
                     return handler
                 client.on_message = make_handler(agent_id)
