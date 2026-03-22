@@ -124,18 +124,12 @@ async def profile_save(
         profile = ResearcherProfile(user_id=current_user.id)
         db.add(profile)
 
-    if research_summary:
-        profile.research_summary = research_summary
-    if techniques:
-        profile.techniques = _parse_list(techniques)
-    if experimental_models:
-        profile.experimental_models = _parse_list(experimental_models)
-    if disease_areas:
-        profile.disease_areas = _parse_list(disease_areas)
-    if key_targets:
-        profile.key_targets = _parse_list(key_targets)
-    if keywords:
-        profile.keywords = _parse_list(keywords)
+    profile.research_summary = research_summary
+    profile.techniques = _parse_list(techniques)
+    profile.experimental_models = _parse_list(experimental_models)
+    profile.disease_areas = _parse_list(disease_areas)
+    profile.key_targets = _parse_list(key_targets)
+    profile.keywords = _parse_list(keywords)
     profile.profile_version = (profile.profile_version or 0) + 1
 
     await db.commit()
