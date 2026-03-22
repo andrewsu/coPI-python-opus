@@ -17,6 +17,7 @@ from src.models import (
     AgentChannel,
     AgentMessage,
     Job,
+    LlmCallLog,
     Publication,
     ResearcherProfile,
     SimulationRun,
@@ -293,6 +294,109 @@ async def admin_activity_detail(
             channels=channels,
             agent_stats=agent_stats,
             channel_stats=channel_stats,
+        ),
+    )
+
+
+@router.get("/activity/{run_id}/llm-calls", response_class=HTMLResponse)
+async def admin_llm_calls(
+    run_id: uuid.UUID,
+    request: Request,
+    agent: str | None = None,
+    phase: str | None = None,
+    model: str | None = None,
+    page: int = 1,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """View LLM call logs for a simulation run."""
+    # Verify run exists
+    run_result = await db.execute(
+        select(SimulationRun).where(SimulationRun.id == run_id)
+    )
+    run = run_result.scalar_one_or_none()
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    # Build filtered query
+    query = select(LlmCallLog).where(LlmCallLog.simulation_run_id == run_id)
+    if agent:
+        query = query.where(LlmCallLog.agent_id == agent)
+    if phase:
+        query = query.where(LlmCallLog.phase == phase)
+    if model:
+        query = query.where(LlmCallLog.model.contains(model))
+
+    # Total count for pagination
+    from sqlalchemy import func as sa_func
+
+    count_query = select(sa_func.count()).select_from(query.subquery())
+    total_count = (await db.execute(count_query)).scalar() or 0
+
+    # Paginate
+    page_size = 50
+    offset = (page - 1) * page_size
+    query = query.order_by(LlmCallLog.created_at).offset(offset).limit(page_size)
+    logs_result = await db.execute(query)
+    logs = logs_result.scalars().all()
+
+    total_pages = max(1, (total_count + page_size - 1) // page_size)
+
+    # Summary stats for this run (unfiltered)
+    stats_result = await db.execute(
+        select(
+            sa_func.count(LlmCallLog.id).label("total_calls"),
+            sa_func.sum(LlmCallLog.input_tokens).label("total_input_tokens"),
+            sa_func.sum(LlmCallLog.output_tokens).label("total_output_tokens"),
+            sa_func.avg(LlmCallLog.latency_ms).label("avg_latency_ms"),
+        ).where(LlmCallLog.simulation_run_id == run_id)
+    )
+    stats = stats_result.first()
+
+    # Model breakdown
+    model_breakdown_result = await db.execute(
+        select(LlmCallLog.model, sa_func.count(LlmCallLog.id).label("count"))
+        .where(LlmCallLog.simulation_run_id == run_id)
+        .group_by(LlmCallLog.model)
+    )
+    model_breakdown = {r.model: r.count for r in model_breakdown_result}
+
+    # Distinct agents and phases for filter dropdowns
+    agents_result = await db.execute(
+        select(LlmCallLog.agent_id)
+        .where(LlmCallLog.simulation_run_id == run_id)
+        .distinct()
+    )
+    available_agents = sorted([r[0] for r in agents_result])
+
+    phases_result = await db.execute(
+        select(LlmCallLog.phase)
+        .where(LlmCallLog.simulation_run_id == run_id)
+        .distinct()
+    )
+    available_phases = sorted([r[0] for r in phases_result])
+
+    return templates.TemplateResponse(
+        "admin/llm_calls.html",
+        _template_context(
+            request,
+            current_user,
+            run=run,
+            logs=logs,
+            total_count=total_count,
+            page=page,
+            total_pages=total_pages,
+            page_size=page_size,
+            total_calls=stats.total_calls or 0,
+            total_input_tokens=stats.total_input_tokens or 0,
+            total_output_tokens=stats.total_output_tokens or 0,
+            avg_latency_ms=round(stats.avg_latency_ms or 0, 1),
+            model_breakdown=model_breakdown,
+            available_agents=available_agents,
+            available_phases=available_phases,
+            filter_agent=agent,
+            filter_phase=phase,
+            filter_model=model,
         ),
     )
 

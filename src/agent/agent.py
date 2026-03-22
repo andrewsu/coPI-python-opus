@@ -122,7 +122,12 @@ Decide whether and how to respond. Output ONLY valid JSON.""",
 
         self.api_call_count += 1
         try:
-            result = await make_decision(decision_system, messages, model=model)
+            result = await make_decision(
+                decision_system,
+                messages,
+                model=model,
+                log_meta={"agent_id": self.agent_id, "phase": "decide"},
+            )
             return result
         except Exception as exc:
             logger.error("[%s] Decision call failed: %s", self.agent_id, exc)
@@ -170,6 +175,7 @@ Keep your response focused and under 500 words.""",
                 messages=messages,
                 model=model,
                 max_tokens=800,
+                log_meta={"agent_id": self.agent_id, "phase": "respond"},
             )
             return response
         except Exception as exc:
@@ -202,6 +208,7 @@ Keep it to 2-4 sentences. Don't use markdown headers.""",
             messages=messages,
             model=model,
             max_tokens=400,
+            log_meta={"agent_id": self.agent_id, "phase": "kickstart"},
         )
         return response
 
@@ -241,6 +248,7 @@ Keep it concise — this is a living summary, not a log. Under 300 words.""",
             messages=messages,
             model=model,
             max_tokens=400,
+            log_meta={"agent_id": self.agent_id, "phase": "memory"},
         )
 
         # Write updated working memory to private profile

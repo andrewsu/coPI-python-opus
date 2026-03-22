@@ -2,13 +2,26 @@
 
 import json
 import logging
-from typing import Any
+import time
+from typing import Any, Callable
 
 import anthropic
 
 from src.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+# Module-level callback for logging LLM calls.
+# Signature: callback(data: dict) where data contains system_prompt, messages,
+# response_text, model, input_tokens, output_tokens, latency_ms, and any extra
+# keys from log_meta.
+_call_log_callback: Callable[[dict], None] | None = None
+
+
+def set_call_log_callback(callback: Callable[[dict], None] | None) -> None:
+    """Register (or clear) a callback that fires after every LLM call."""
+    global _call_log_callback
+    _call_log_callback = callback
 
 
 def get_anthropic_client() -> anthropic.Anthropic:
@@ -99,19 +112,36 @@ async def generate_agent_response(
     messages: list[dict[str, str]],
     model: str | None = None,
     max_tokens: int = 1000,
+    log_meta: dict[str, str] | None = None,
 ) -> str:
     """Generate an agent response via Claude."""
     settings = get_settings()
     model = model or settings.llm_agent_model
     client = get_anthropic_client()
     try:
+        t0 = time.monotonic()
         message = client.messages.create(
             model=model,
             max_tokens=max_tokens,
             system=system_prompt,
             messages=messages,
         )
-        return message.content[0].text
+        latency_ms = (time.monotonic() - t0) * 1000
+        response_text = message.content[0].text
+
+        if _call_log_callback and log_meta:
+            _call_log_callback({
+                "system_prompt": system_prompt,
+                "messages": messages,
+                "response_text": response_text,
+                "model": model,
+                "input_tokens": message.usage.input_tokens,
+                "output_tokens": message.usage.output_tokens,
+                "latency_ms": latency_ms,
+                **log_meta,
+            })
+
+        return response_text
     except Exception as exc:
         logger.error("Failed to generate agent response: %s", exc)
         raise
@@ -121,6 +151,7 @@ async def make_decision(
     system_prompt: str,
     messages: list[dict[str, str]],
     model: str | None = None,
+    log_meta: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """
     Phase 1 agent decision call. Returns structured JSON decision.
@@ -132,6 +163,7 @@ async def make_decision(
         messages=messages,
         model=model,
         max_tokens=300,
+        log_meta=log_meta,
     )
     return _extract_json(response_text)
 

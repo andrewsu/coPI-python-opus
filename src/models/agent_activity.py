@@ -1,9 +1,9 @@
-"""Agent activity models: SimulationRun, AgentMessage, AgentChannel."""
+"""Agent activity models: SimulationRun, AgentMessage, AgentChannel, LlmCallLog."""
 
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -35,6 +35,9 @@ class SimulationRun(Base):
     )
     channels: Mapped[list["AgentChannel"]] = relationship(
         "AgentChannel", back_populates="simulation_run", cascade="all, delete-orphan"
+    )
+    llm_call_logs: Mapped[list["LlmCallLog"]] = relationship(
+        "LlmCallLog", back_populates="simulation_run", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
@@ -102,3 +105,36 @@ class AgentChannel(Base):
 
     def __repr__(self) -> str:
         return f"<AgentChannel id={self.id} name={self.channel_name} type={self.channel_type}>"
+
+
+class LlmCallLog(Base):
+    __tablename__ = "llm_call_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    simulation_run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("simulation_runs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    agent_id: Mapped[str] = mapped_column(String(50), nullable=False)
+    phase: Mapped[str] = mapped_column(String(30), nullable=False)  # decide, respond, kickstart, memory
+    model: Mapped[str] = mapped_column(String(100), nullable=False)
+    system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    messages_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    response_text: Mapped[str] = mapped_column(Text, nullable=False)
+    input_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    latency_ms: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    simulation_run: Mapped["SimulationRun"] = relationship(
+        "SimulationRun", back_populates="llm_call_logs"
+    )
+
+    def __repr__(self) -> str:
+        return f"<LlmCallLog id={self.id} agent={self.agent_id} phase={self.phase} model={self.model}>"

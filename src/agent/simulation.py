@@ -9,9 +9,14 @@ from typing import Any
 
 from src.agent.agent import Agent
 from src.agent.channels import SEEDED_CHANNELS, make_collaboration_channel_name
-from src.models import AgentMessage, SimulationRun
+from src.config import get_settings
+from src.models import AgentMessage, LlmCallLog, SimulationRun
+from src.services.llm import set_call_log_callback
 
 logger = logging.getLogger(__name__)
+
+# response_type values that route to Opus
+OPUS_RESPONSE_TYPES = {"collaboration", "experiment", "help_wanted"}
 
 # Pilot lab configurations
 PILOT_LABS = [
@@ -59,6 +64,10 @@ class SimulationEngine:
         # Channel ID to name mapping
         self._channel_id_map: dict[str, str] = {}
 
+        # LLM call log buffer
+        self._llm_log_buffer: list[dict] = []
+        self._llm_log_flush_size = 10
+
     @property
     def is_within_time_limit(self) -> bool:
         if not self._start_time:
@@ -78,6 +87,9 @@ class SimulationEngine:
             self.max_runtime_minutes,
             self.budget_cap,
         )
+
+        # Register LLM call log callback
+        set_call_log_callback(self._on_llm_call)
 
         # Register message handlers — capture the event loop now since Slack Bolt
         # handlers run in thread pool threads that don't have an event loop.
@@ -102,7 +114,56 @@ class SimulationEngine:
     async def stop(self) -> None:
         """Stop the simulation gracefully."""
         self._running = False
+        set_call_log_callback(None)
+        await self._flush_llm_logs()
         logger.info("Simulation stopping...")
+
+    def _on_llm_call(self, data: dict) -> None:
+        """Callback fired after each LLM API call. Buffers for batch DB write."""
+        self._llm_log_buffer.append(data)
+        if len(self._llm_log_buffer) >= self._llm_log_flush_size:
+            # Schedule flush without blocking the caller
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._flush_llm_logs())
+            except RuntimeError:
+                pass  # No event loop — will flush on stop()
+
+    async def _flush_llm_logs(self) -> None:
+        """Write buffered LLM call logs to the database."""
+        if not self._llm_log_buffer or not self.session_factory or not self.simulation_run_id:
+            return
+        batch = self._llm_log_buffer[:]
+        self._llm_log_buffer.clear()
+        try:
+            async with self.session_factory() as db:
+                for entry in batch:
+                    record = LlmCallLog(
+                        simulation_run_id=self.simulation_run_id,
+                        agent_id=entry.get("agent_id", "unknown"),
+                        phase=entry.get("phase", "unknown"),
+                        model=entry.get("model", ""),
+                        system_prompt=entry.get("system_prompt", ""),
+                        messages_json=entry.get("messages", []),
+                        response_text=entry.get("response_text", ""),
+                        input_tokens=entry.get("input_tokens", 0),
+                        output_tokens=entry.get("output_tokens", 0),
+                        latency_ms=entry.get("latency_ms", 0.0),
+                    )
+                    db.add(record)
+                await db.commit()
+            logger.debug("Flushed %d LLM call logs to DB", len(batch))
+        except Exception as exc:
+            logger.warning("Failed to flush LLM call logs: %s", exc)
+
+    @staticmethod
+    def _select_response_model(decision: dict) -> str:
+        """Select Opus or Sonnet based on the decision's response_type."""
+        settings = get_settings()
+        response_type = decision.get("response_type", "follow_up")
+        if response_type in OPUS_RESPONSE_TYPES:
+            return settings.llm_agent_model_opus
+        return settings.llm_agent_model_sonnet
 
     async def _run_kickstart(self) -> None:
         """Post scripted and generated kickstart messages to initiate conversation."""
@@ -238,11 +299,13 @@ class SimulationEngine:
             try:
                 action = decision.get("action", "respond")
                 if action == "respond":
+                    response_model = self._select_response_model(decision)
                     response_text = await agent.respond(
                         channel_name=channel_name,
                         channel_history=history[:-1],
                         new_message=msg,
                         action_context=decision.get("reason", ""),
+                        model=response_model,
                     )
                     # Reply in thread — use the original message's thread_ts if it's
                     # already in a thread, otherwise use its ts to start a new thread.
@@ -265,12 +328,14 @@ class SimulationEngine:
                 logger.error("[%s] Response failed: %s", agent.agent_id, exc)
 
     async def _agent_decide(self, agent: Agent, channel_name: str, msg: dict) -> dict:
-        """Run Phase 1 decision for an agent."""
+        """Run Phase 1 decision for an agent. Always uses Sonnet."""
+        settings = get_settings()
         history = self._channel_history.get(channel_name, [])
         return await agent.decide(
             channel_name=channel_name,
             channel_history=history[:-1],
             new_message=msg,
+            model=settings.llm_agent_model_sonnet,
         )
 
     async def _post_message(self, agent_id: str, channel: str, text: str, thread_ts: str | None = None) -> None:

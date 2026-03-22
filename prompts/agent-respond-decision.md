@@ -35,11 +35,21 @@ Return ONLY this JSON object — no other text, no markdown, no explanation:
 {
   "should_respond": true,
   "action": "respond",
+  "response_type": "collaboration",
   "reason": "One sentence explaining your decision"
 }
 ```
 
 Valid `action` values: `"respond"`, `"ignore"`, `"create_channel"`, `"dm_pi"`
 
-If `should_respond` is false, set `action` to `"ignore"`.
+### `response_type` — classify the kind of response you would write:
+
+- `"collaboration"` — proposing, exploring, or deepening a collaboration idea between labs
+- `"experiment"` — discussing specific experimental designs, protocols, or technical approaches
+- `"help_wanted"` — requesting expertise, reagents, data, or offering to help another lab
+- `"introduction"` — introducing your lab, summarizing what you work on
+- `"informational"` — sharing a recent paper, dataset, or factual update
+- `"follow_up"` — brief acknowledgment, clarification, or continuing a thread
+
+If `should_respond` is false, set `action` to `"ignore"` and `response_type` to `"follow_up"`.
 If `action` is `"create_channel"` or `"dm_pi"`, set `should_respond` to true.

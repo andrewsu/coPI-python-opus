@@ -52,6 +52,8 @@ class Settings(BaseSettings):
     # LLM models
     llm_profile_model: str = "claude-opus-4-6"
     llm_agent_model: str = "claude-sonnet-4-6"
+    llm_agent_model_opus: str = "claude-opus-4-6"
+    llm_agent_model_sonnet: str = "claude-sonnet-4-6"
 
     # Worker
     worker_poll_interval: int = 5  # seconds
