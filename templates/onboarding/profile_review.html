@@ -14,8 +14,8 @@
         </div>
     </div>
 
-    {% if job_status == 'pending' or job_status == 'processing' %}
-    <!-- Pipeline running -->
+    {% if job_status == 'pending' or job_status == 'processing' or job_status == 'none' %}
+    <!-- Pipeline running or queued -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
         <h2 class="text-xl font-semibold text-gray-800 mb-2">Building Your Profile</h2>
@@ -148,14 +148,6 @@
         </form>
     </div>
 
-    {% else %}
-    <!-- No profile yet -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-        <h2 class="text-xl font-semibold text-gray-800 mb-2">Starting Profile Generation</h2>
-        <p class="text-gray-600 mb-4">We're fetching your publication data from ORCID...</p>
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-    </div>
-    <script>setTimeout(function() { location.reload(); }, 5000);</script>
     {% endif %}
 </div>
 {% endblock %}
