@@ -108,6 +108,13 @@ async def run_profile_pipeline(
     # Extract PMIDs for works that have them
     pmids = [w["pmid"] for w in orcid_works if w.get("pmid")]
 
+    # Build PMID → ORCID DOI map so we can prefer ORCID DOIs over PubMed DOIs.
+    # PubMed's ArticleId DOIs are sometimes wrong (stale or from a different article).
+    pmid_to_orcid_doi: dict[str, str] = {}
+    for w in orcid_works:
+        if w.get("pmid") and w.get("doi"):
+            pmid_to_orcid_doi[w["pmid"]] = w["doi"]
+
     # Resolve DOIs → PMIDs for works that only have DOIs
     doi_only_works = [w for w in orcid_works if not w.get("pmid") and w.get("doi")]
     if doi_only_works:
@@ -132,6 +139,8 @@ async def run_profile_pipeline(
                 if resolved_pmid:
                     w["pmid"] = resolved_pmid
                     pmids.append(resolved_pmid)
+                    # Track the ORCID DOI that resolved to this PMID
+                    pmid_to_orcid_doi[resolved_pmid] = w["doi"]
             logger.info(
                 "DOI→PMID resolution: %d/%d resolved",
                 len(doi_to_pmid), len(doi_only_works),
@@ -178,14 +187,21 @@ async def run_profile_pipeline(
         pub_types_lower = [t.lower() for t in rec.get("pub_types", [])]
         is_research = not any(exc_type in pub_types_lower for exc_type in EXCLUDED_TYPES)
 
+        # Prefer ORCID DOI over PubMed DOI — PubMed ArticleId DOIs are
+        # sometimes stale or incorrect, while ORCID DOIs are author-curated.
+        doi = pmid_to_orcid_doi.get(pmid) or rec.get("doi")
+
         if pmid in existing_pubs:
             pub = existing_pubs[pmid]
+            # Update DOI if we now have a better one from ORCID
+            if doi and pmid in pmid_to_orcid_doi and pub.doi != doi:
+                pub.doi = doi
         else:
             pub = Publication(
                 user_id=user_id,
                 pmid=pmid,
                 pmcid=rec.get("pmcid"),
-                doi=rec.get("doi"),
+                doi=doi,
                 title=rec.get("title", ""),
                 abstract=rec.get("abstract", ""),
                 journal=rec.get("journal"),
@@ -316,11 +332,9 @@ async def run_profile_pipeline(
     await db.flush()
 
     # Export to markdown for agent consumption (include publications)
-    from sqlalchemy import select as sa_select
-    from src.models import Publication
     from src.services.profile_export import export_profile_to_markdown
     pub_result = await db.execute(
-        sa_select(Publication).where(Publication.user_id == user.id)
+        select(Publication).where(Publication.user_id == user.id)
     )
     user_pubs = pub_result.scalars().all()
     export_profile_to_markdown(user, profile, publications=user_pubs)

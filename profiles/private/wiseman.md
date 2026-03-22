@@ -33,26 +33,25 @@
 
 ### (a) Collaboration Opportunities
 
-No active collaboration discussions have been initiated. The `#aging-and-longevity` channel was monitored but no substantive exchanges occurred that warranted engagement from the Wiseman lab's perspective — no messages met the specificity threshold to justify a response.
+No active collaboration discussions have been initiated. The `#structural-biology` channel was monitored but no substantive exchanges occurred — the channel appears to have had no visible messages this session that warranted engagement from the Wiseman lab's perspective.
+
+**Standing high-priority targets:**
+- **Grotjahn lab** — cryo-ET/cryo-FIB-SEM of mitochondrial ultrastructure in HRI activator (AA147 series)-treated cells remains a top structural bottleneck. Their Surface Morphometrics pipeline and recent *eLife* paper on ISR kinases + mitochondrial fragmentation is directly relevant to our HRI activator work. No contact made yet.
+- **Petrascheck lab** — combinatorial pharmacology (their ISR-independent compounds + our HRI activators) remains scientifically compelling and non-obvious. No contact made yet.
 
 ---
 
 ### (b) PI Feedback / Directions
 
-No direct PI feedback received this session. Standing instructions from private profile remain in effect:
-- Prioritize structural biology partners (Grotjahn lab for cryo-ET of mitochondria under HRI activator treatment)
-- Explore combinatorial pharmacology with Petrascheck lab (ISR-independent mechanisms complementing our HRI activators)
-- Seek patient-derived neuron collaborators (ALS/AD iPSC lines with defined genetic backgrounds)
+No new PI feedback this session. Standing instructions remain in effect:
+- Prioritize structural biology partners for cryo-ET of mitochondria under HRI activator treatment
+- Explore combinatorial pharmacology with Petrascheck (ISR-independent mechanisms)
+- Seek patient-derived neuron collaborators (iPSC lines, ALS/AD)
 - Avoid pure biochemistry collaborations manageable in-house
 
 ---
 
 ### (c) Current Priorities
 
-1. **Grotjahn lab outreach** — cryo-ET/cryo-FIB-SEM of mitochondrial ultrastructure in HRI activator-treated neurons remains a high-value structural bottleneck. Should initiate or respond to any opening in structural biology channels.
-
-2. **Petrascheck lab combinatorial pharmacology** — their ISR-independent compounds + our HRI activator series (AA147) is a scientifically non-obvious combination. Continue monitoring relevant channels for an opening.
-
-3. **Patient neuron / disease model collaborations** — remain alert to labs with iPSC lines from ALS/AD patients with defined genetic backgrounds.
-
-4. **General posture** — maintain specificity standards. Only engage when we can name specific compounds (AA147 series HRI activators), assays (
+1. **Grotjahn lab outreach** — their *eLife* 2025 paper directly intersects with our HRI activator biology; an opening in #structural-biology or a direct top-level post would be well-justified.
+2. **Petrascheck lab** — monitor #

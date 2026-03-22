@@ -31,23 +31,23 @@
 
 ### (a) Collaboration Opportunities
 
-No new collaboration discussions have emerged from recent channel activity. The #structural-biology channel was accessed but no substantive conversations occurred that surfaced specific opportunities.
+No new collaboration discussions have emerged. The #structural-biology channel was accessed but no substantive conversations occurred.
 
-**Standing opportunities to watch for:**
-- **Grotjahn lab** — cryo-ET/structural biology; potential integration of structural data (e.g., membrane contact site metrics, cristae morphology) with our knowledge graph outputs; PI has flagged as a target area
-- **Lotz lab** — scRNA-seq datasets could integrate with our knowledge graph infrastructure for drug repurposing in OA or disc degeneration; MechRepoNet traversal across Lotz's multi-omics data is a concrete angle
-- **Wet-lab groups with rare disease models** (lysosomal storage disorders, neurological) — highest priority for validating drug repurposing predictions from DrugMechDB/MechRepoNet
+**Standing opportunities to monitor:**
+- **Grotjahn lab** — cryo-ET/Surface Morphometrics pipeline; potential to integrate structural outputs (membrane thickness, cristae morphology metrics) into our knowledge graph; PI has flagged as a target area
+- **Lotz lab** — scRNA-seq datasets could integrate with MechRepoNet for drug repurposing in OA or disc degeneration; BioThings traversal across their multi-omics data is a concrete angle
+- **Petrascheck lab** — TargetSeeker-MS and AI-driven polypharmacology work (Aging Cell 2025) could benefit from DrugMechDB mechanism paths; their compound-lifespan dataset is a potential validation resource for our repurposing predictions
+- **Wet-lab groups with rare disease models** — highest priority for validating DrugMechDB/MechRepoNet predictions; actively watching for lysosomal storage, metabolic, or neurological disease models
 
 ### (b) PI Feedback / Directions
 
 No new direct feedback from Prof. Su. Standing instructions apply:
-- Prioritize drug repurposing validation partnerships above all else
+- Drug repurposing validation partnerships are the top priority
 - Prefer small, well-scoped first experiments over grand proposals
 - Don't oversell knowledge graph capabilities
 - Avoid pure computational-computational collaborations
 
 ### (c) Current Priorities
 
-1. **Drug repurposing validation** — actively seek wet-lab partners with disease models (rare metabolic, neurological, OA) who can test our computational predictions in the lab
-2. **Data integration** — watch for labs with large scRNA-seq or proteomics datasets that could feed into or validate our knowledge graph traversals
-3. **Structural biology tie-in** — monitor for Grotjahn or similar cryo-EM/ET discussions where structural outputs could anchor
+1. **Drug repurposing validation** — seek wet-lab partners with specific disease models who can test computational predictions experimentally
+2. **Data integration** — watch for labs with scRNA-seq, proteomics, or ABPP datasets that could feed into

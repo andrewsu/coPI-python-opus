@@ -6,61 +6,61 @@
 
 ## Research Summary
 
-The Saez laboratory at Scripps Research Institute investigates the molecular mechanisms linking lipid metabolism, endoplasmic reticulum (ER) stress, and metabolic disease, with a particular emphasis on understanding how lipid homeostasis regulates cellular stress responses. A central theme of the lab's work is elucidating how the unfolded protein response (UPR) and ER stress contribute to metabolic dysfunction in obesity, diabetes, and atherosclerosis. Using a combination of nuclear receptor biology, chemical biology, and in vivo metabolic phenotyping, the lab has identified pharmacological strategies to modulate ER stress and improve metabolic outcomes. Notable contributions include characterizing the role of liver X receptors (LXRs) and oxysterol signaling in macrophage biology, foam cell formation, and cholesterol efflux, as well as investigating how modulation of ceramide and sphingolipid metabolism impacts insulin sensitivity. The lab has also explored the therapeutic potential of chemical chaperones and small molecules that alleviate ER stress in preclinical models of type 2 diabetes and nonalcoholic fatty liver disease. Recent work has expanded into understanding how lipid remodeling at the ER membrane influences protein folding capacity and integrated stress responses. The Saez lab leverages genetically engineered mouse models, primary hepatocyte and macrophage cultures, and lipidomic profiling to bridge molecular mechanisms with whole-organism physiology, positioning the group at the interface of lipid biology and metabolic disease therapeutics.
+The Saez lab at Scripps Research Institute in the Department of Molecular Medicine investigates the molecular mechanisms linking lipid metabolism, endoplasmic reticulum (ER) stress, and metabolic disease. A central theme of the laboratory's work is understanding how lipid composition of cellular membranes influences ER function and the unfolded protein response (UPR), with implications for type 2 diabetes, obesity, and non-alcoholic fatty liver disease. The lab has made significant contributions to understanding how nuclear receptors, particularly liver X receptors (LXRs) and oxysterol signaling, regulate cholesterol and lipid homeostasis. Using a combination of chemical biology, pharmacological, and genetic approaches, the Saez lab has identified small molecules that modulate ER stress and lipid metabolism, establishing a strong translational pipeline from target discovery to therapeutic development. Recent work has focused on the role of lipid saturation in ER membrane stress, the therapeutic potential of modulating ceramide and sphingolipid metabolism, and the identification of novel compounds that alleviate metabolic dysfunction. The lab employs mouse models of metabolic disease alongside cell-based systems to dissect how perturbations in lipid handling contribute to pancreatic beta-cell failure and insulin resistance, bridging fundamental lipid biology with potential interventions for cardiometabolic diseases.
 
 ## Key Methods and Technologies
 
+- High-throughput small molecule screening
 - Lipidomic profiling by mass spectrometry
+- Quantitative real-time PCR for gene expression analysis
 - Metabolic phenotyping of mouse models (glucose tolerance tests, insulin tolerance tests, indirect calorimetry)
-- Primary hepatocyte isolation and culture
-- Bone marrow-derived macrophage culture and foam cell assays
-- Gene expression profiling (microarray and RNA-seq)
-- Reporter assays for nuclear receptor activation
-- Small molecule screening and chemical biology
-- Western blotting and co-immunoprecipitation for UPR signaling components
-- Histological analysis of liver and adipose tissue (Oil Red O, H&E staining)
-- In vivo adenoviral and AAV-mediated gene delivery
-- Cholesterol efflux assays
-- Quantitative RT-PCR for ER stress markers
+- ER stress reporter assays
+- Pharmacological modulation of nuclear receptor signaling
+- Western blotting and co-immunoprecipitation
+- Histological analysis of metabolic tissues (liver, pancreas, adipose)
+- Cell-based lipid loading and lipotoxicity assays
+- Adenoviral and lentiviral gene delivery in primary cells
+- Flow cytometry for immune and metabolic cell profiling
+- Isotope tracer studies for lipid flux analysis
 
 ## Model Systems
 
-- Diet-induced obesity mouse models (high-fat diet C57BL/6J)
+- High-fat diet-fed C57BL/6J mice
+- ob/ob and db/db mouse models of obesity and diabetes
 - LXR-alpha and LXR-beta knockout mice
-- ob/ob and db/db leptin-deficient mouse models
-- Liver-specific conditional knockout mice
-- Primary murine hepatocytes
+- Pancreatic beta-cell lines (MIN6, INS-1)
+- Primary mouse and human islets
+- HepG2 hepatocytes
+- Primary hepatocytes from mouse models
+- 3T3-L1 adipocytes
 - Bone marrow-derived macrophages
-- RAW264.7 macrophage cell line
-- THP-1 human monocyte/macrophage cell line
-- HepG2 hepatocyte cell line
-- ApoE-knockout atherosclerosis mouse models
 
 ## Disease Areas / Biological Processes
 
 - Type 2 diabetes
-- Obesity and metabolic syndrome
-- Nonalcoholic fatty liver disease (NAFLD)
+- Obesity
+- Non-alcoholic fatty liver disease (NAFLD)
 - Atherosclerosis
-- ER stress-related metabolic disorders
-- Insulin resistance
+- Metabolic syndrome
+- ER stress-related diseases
+- Pancreatic beta-cell dysfunction
 - Dyslipidemia
+- Insulin resistance
 
 ## Key Molecular Targets
 
-- Liver X receptors (LXRα/LXRβ)
+- Liver X receptor alpha (LXRα/NR1H3)
+- Liver X receptor beta (LXRβ/NR1H2)
+- Stearoyl-CoA desaturase 1 (SCD1)
 - IRE1α
 - PERK
-- ATF6
-- CHOP (DDIT3)
-- BiP/GRP78
-- ABCA1
-- ABCG1
+- ATF6α
+- SREBP-1c
 - Ceramide synthases
 - Dihydroceramide desaturase (DES1)
-- SREBP1c
-- XBP1
+- Oxysterols
+- Unfolded protein response (UPR) pathway
 
 ## Keywords
 
-Endoplasmic reticulum stress, Unfolded protein response, Lipid homeostasis, Nuclear receptor pharmacology, Chemical chaperones, Oxysterol signaling, Sphingolipid metabolism, Cholesterol metabolism, Hepatic steatosis, Metabolic inflammation, Lipotoxicity, Therapeutic targeting of ER stress
+Lipid metabolism, ER stress, Nuclear receptor pharmacology, Lipotoxicity, Sphingolipid metabolism, Chemical biology, Cholesterol homeostasis, Membrane lipid saturation, Beta-cell survival, Oxysterol signaling, Cardiometabolic disease, Therapeutic target discovery

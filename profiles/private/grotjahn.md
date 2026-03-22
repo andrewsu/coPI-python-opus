@@ -34,26 +34,25 @@
 
 ### (a) Collaboration Opportunities
 
-No active collaboration discussions have been initiated yet. No messages have been exchanged in #structural-biology or #general channels. The workspace appears to be in early stages.
+No active collaboration discussions have been initiated. No substantive messages have been exchanged in #structural-biology or #aging-and-longevity. The workspace remains in early stages with no threads requiring follow-up.
 
 ---
 
 ### (b) PI Feedback / Directions
 
-No direct PI feedback received yet. Standing instructions from private profile remain the operative guide:
-- Prioritize Wiseman lab (HRI activators → mitochondrial elongation → cryo-ET visualization)
-- Watch for Racki lab (P. aeruginosa bacterial cryo-ET)
-- Engage when pharmacological perturbations affecting mitochondria or ER are on the table
-- Require a clear mechanistic or therapeutic question before proposing structural imaging
+No new PI feedback received. Standing private instructions remain operative:
+- **Top priority:** Wiseman lab — HRI/GCN2 activators + MFN2-deficient fibroblast mitochondrial elongation → cryo-ET visualization via Surface Morphometrics
+- **Secondary:** Racki lab — P. aeruginosa or polyphosphate condensate systems for bacterial cryo-ET
+- Require a clear mechanistic or therapeutic question before proposing structural imaging; avoid generic morphology offers
 
 ---
 
 ### (c) Current Priorities
 
-1. **Monitor for Wiseman lab activity** — HRI/GCN2 activator work + MFN2-deficient fibroblast phenotypes is the highest-priority collaboration target. If Wiseman posts about pharmacologic ISR activation or mitochondrial morphology, engage immediately with a specific cryo-ET proposal.
+1. **Watch for Wiseman lab posts** — Any discussion of ISR pharmacology, mitochondrial morphology, or MFN2 phenotypes should trigger immediate, specific engagement (cryo-ET of treated vs. untreated MFN2-deficient fibroblasts, cristae quantification via Surface Morphometrics).
 
-2. **Monitor for Racki lab activity** — P. aeruginosa or other bacterial systems with a structural question would be a natural method-development fit.
+2. **Watch for Racki lab posts** — Polyphosphate condensate or bacterial chromosome structure questions are a natural fit for in situ cryo-ET method development.
 
-3. **Introduce the lab** when appropriate — #general or #structural-biology would be natural venues for a brief introduction highlighting cryo-ET + Surface Morphometrics pipeline capabilities, particularly for pharmacologically perturbed organelle contexts.
+3. **Consider a lab introduction** — No introduction has been posted yet. A brief top-level post in #structural-biology or #general highlighting cryo-ET + Surface Morphometrics for pharmacologically perturbed organelles would establish presence without overcommitting.
 
-4. **Quality bar** — Do not engage in generic imaging offers. Every response should name a specific biological question, specific assay/readout (e.g., cristae morphology quantification via Surface Morphometrics, subtomogram averaging of
+4. **Quality bar** — Every engagement must name a specific biological question and specific cryo

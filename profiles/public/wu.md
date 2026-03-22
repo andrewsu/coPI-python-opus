@@ -6,66 +6,64 @@
 
 ## Research Summary
 
-The Wu lab at The Scripps Research Institute develops community-driven bioinformatics infrastructure and knowledge graph platforms to improve the findability, accessibility, interoperability, and reusability (FAIRness) of biomedical data. A central focus is the BioThings suite of tools, including BioThings Explorer—a lightweight application that queries a federated knowledge graph by chaining biomedical web service APIs to enable multi-step reasoning across heterogeneous data sources. This platform has applications in drug repurposing, drug target identification, and clinical decision support. The lab has also built widely used gene and gene set annotation services, including MyGene.info and MyGeneset.info, which provide programmatic access to integrated gene identifiers, functional annotations, and curated gene set collections from resources such as Reactome, GO, MSigDB, and others. Complementary work includes developing metadata standardization tools (Schema Playground) leveraging schema.org to improve discoverability of biomedical research outputs, and creating model organism databases such as ChlamBase built on community-curation principles using Wikidata. The lab also contributes to large-scale transcriptomic atlas projects, including gene expression atlases for rat and sheep, employing RNA-seq quantification and gene co-expression network analysis. Across all projects, a unifying theme is enabling open, scalable, and community-maintained data resources that bridge gaps between disparate biomedical knowledge sources.
+The Wu lab at The Scripps Research Institute develops scalable bioinformatics infrastructure and community-driven platforms for the integration, annotation, and dissemination of biomedical knowledge. A central theme of the lab's work is building high-performance APIs and federated knowledge graphs that enable researchers to programmatically access and analyze gene, variant, and gene set annotations from diverse sources. Key platforms developed by the lab—including MyGene.info, MyGeneset.info, and BioThings Explorer—exemplify a philosophy of lightweight, distributed data integration that avoids centralized warehousing in favor of real-time, semantically precise querying across a network of biomedical web services. The lab has applied these resources to drug repurposing, drug target identification, and clinical decision support use cases. Complementing this infrastructure work, the lab contributes to large-scale transcriptomic atlases—including those for the rat and sheep—leveraging gene co-expression network analysis to assign functional annotations and deconvolve cell-type-specific signatures. The lab also champions FAIR data principles through tools like Schema Playground, which facilitates the creation and reuse of metadata schemas for biomedical resources, and community-curated model organism databases such as ChlamBase built on the Wikidata framework. Current directions emphasize expanding the BioThings ecosystem and enabling federated biomedical knowledge discovery at scale.
 
 ## Key Methods and Technologies
 
-- Federated knowledge graph construction and querying (BioThings Explorer)
-- RESTful API development for biomedical data services
+- Federated knowledge graph construction and querying
+- RESTful API development for biomedical data integration (BioThings SDK)
 - Gene co-expression network (GCN) analysis
-- RNA-seq data curation, downsampling, and quantification from public repositories
-- Metadata schema authoring and validation (Schema.org-based)
-- Community-curated database development using Wikidata
-- Semantic annotation of biomedical web service inputs and outputs
+- Large-scale RNA-seq data curation and reprocessing from public repositories
+- Metadata schema authoring and validation using schema.org standards
+- Semantic annotation of web service inputs and outputs (SmartAPI)
 - Automated web service chaining for multi-step graph queries
-- Network-based cluster analysis for gene function inference
-- Data integration across multiple biomedical databases (UniProt, Reactome, GO, MSigDB, CTD, WikiPathways)
-- FAIR data principles implementation for biomedical resources
+- Network-based cluster analysis for functional gene annotation
+- Community-curated database development (Wikidata framework)
+- FAIR data tooling and standards development
 
 ## Model Systems
 
-- BioThings knowledge graph (federated network of biomedical APIs)
-- MyGene.info gene annotation database
-- MyGeneset.info gene set platform (~180k gene sets across multiple species)
-- BioGPS gene expression portal
-- Schema Playground metadata registry
-- ChlamBase model organism database (Chlamydia)
-- Wikidata as a community-curation platform
-- Rat RNA-seq transcriptomic atlas (7700 datasets, 585 tissues/cell types)
-- Sheep gene expression atlas (Ovis aries, Oar v3.1 reference genome)
-- Public RNA-seq repositories (GEO, SRA, BioProject)
+- BioThings Explorer federated knowledge graph
+- MyGene.info gene annotation API
+- MyGeneset.info gene set platform
+- Public RNA-seq repositories (NCBI SRA/GEO BioProjects)
+- Rat transcriptomic atlas (7700 RNA-seq datasets, 585 tissues/cells)
+- Sheep gene expression atlas (Ovis aries Oar v3.1 reference genome)
+- ChlamBase model organism database for Chlamydia species
+- Schema.org and Schema Playground metadata registry
+- Wikidata as a community-curated knowledge base
+- Gene set resources (WikiPathways, CTD, Reactome, SMPDB, MSigDB, GO, DO)
 
 ## Disease Areas / Biological Processes
 
-- Drug repurposing and target identification
+- Drug repurposing and drug target identification
 - Infectious disease (Chlamydia biology)
 - COVID-19 resource harmonization (Outbreak.info)
+- Biomedical knowledge integration and discovery
 - Innate immunity
-- Biomedical knowledge integration and FAIR data science
 - Functional genomics and genome annotation
 
 ## Key Molecular Targets
 
 - Gene and genetic variant annotations
-- Gene sets (WikiPathways, Reactome, GO, MSigDB, SMPDB, CTD, DO)
-- Schema.org metadata vocabulary
-- Biomedical API network (SmartAPI)
-- Transcription factor co-expression modules
+- Gene sets and pathway collections
+- Transcription factor regulons
+- Co-expression gene modules
 
 ## Keywords
 
-knowledge graphs, biomedical APIs, FAIR principles, gene annotation, gene sets, data integration, open data infrastructure, community curation, transcriptomic atlas, semantic web, schema.org, bioinformatics web services, model organism databases, drug repurposing, data wrangling
+FAIR data principles, biomedical APIs, knowledge graphs, gene annotation, data harmonization, open data infrastructure, SmartAPI, BioThings, BioGPS, transcriptomic atlas, community curation, schema.org, bioinformatics web services, programmatic data access
 
 ## Recent Publications
 
-- BioThings Explorer: a query engine for a federated knowledge graph of biomedical APIs. *Bioinformatics (Oxford, England)*. (2023). https://doi.org/10.1007/978-3-319-58451-5_11#chapter-info
-- MyGeneset.info: an interactive and programmatic platform for community-curated and user-created collections of genes. *Nucleic acids research*. (2023). https://doi.org/10.1101/055913
-- Addressing barriers in FAIR data practices for biomedical data. *Scientific data*. (2023). https://doi.org/10.2196/20028
-- Schema Playground: A tool for authoring, extending, and using metadata schemas to improve FAIRness of biomedical data. *bioRxiv : the preprint server for biology*. (2022). https://doi.org/10.1038/sdata.2016.18
+- BioThings Explorer: a query engine for a federated knowledge graph of biomedical APIs. *Bioinformatics (Oxford, England)*. (2023). https://doi.org/10.1093/bioinformatics/btad570
+- MyGeneset.info: an interactive and programmatic platform for community-curated and user-created collections of genes. *Nucleic acids research*. (2023). https://doi.org/10.1093/nar/gkad289
+- Addressing barriers in FAIR data practices for biomedical data. *Scientific data*. (2023). https://doi.org/10.1038/s41597-023-01969-8
+- Schema Playground: A tool for authoring, extending, and using metadata schemas to improve FAIRness of biomedical data. *bioRxiv : the preprint server for biology*. (2022). https://doi.org/10.1101/2021.09.02.458726
 - Generation and network analysis of an RNA-seq transcriptional atlas for the rat. *NAR genomics and bioinformatics*. (2022). https://doi.org/10.1093/nargab/lqac017
-- ChlamBase: a curated model organism database for the Chlamydia research community. *Database : the journal of biological databases and curation*. (2019). https://doi.org/10.1093/database/baz041
 - ChlamBase: a curated model organism database for the Chlamydia research community. *Database : the journal of biological databases and curation*. (2019). https://doi.org/10.1093/database/baz091
-- A high resolution atlas of gene expression in the domestic sheep (Ovis aries). *PLoS genetics*. (2017). https://doi.org/10.1093/molbev/msw054
+- ChlamBase: a curated model organism database for the Chlamydia research community. *Database : the journal of biological databases and curation*. (2019). https://doi.org/10.1093/database/baz041
+- A high resolution atlas of gene expression in the domestic sheep (Ovis aries). *PLoS genetics*. (2017). https://doi.org/10.1371/journal.pgen.1006997
 
 ## Active Grants
 

@@ -1,6 +1,7 @@
 """Export a ResearcherProfile from the database to a markdown file for agent consumption."""
 
 import logging
+import re
 from pathlib import Path
 
 from src.models import Publication, ResearcherProfile, User
@@ -105,11 +106,15 @@ def export_profile_to_markdown(
                 if pub.year:
                     parts.append(f"({pub.year})")
                 citation = ". ".join(parts) + "."
-                # Add link
-                if pub.doi:
+                # Add link — validate DOI before including
+                doi_ok = pub.doi and _validate_doi_journal(pub.doi, pub.journal)
+                if doi_ok:
                     citation += f" https://doi.org/{pub.doi}"
                 elif pub.pmid:
                     citation += f" https://pubmed.ncbi.nlm.nih.gov/{pub.pmid}/"
+                elif pub.doi:
+                    # DOI failed validation but no PMID fallback — include anyway
+                    citation += f" https://doi.org/{pub.doi}"
                 lines.append(f"- {citation}")
             lines.append("")
 
@@ -129,3 +134,58 @@ def export_profile_to_markdown(
     except Exception as exc:
         logger.error("Failed to export profile for %s: %s", user.name, exc)
         return None
+
+
+# Known DOI prefix → journal name patterns for validation.
+# If a DOI prefix belongs to a specific publisher/journal but the publication's
+# journal doesn't match, the DOI is likely wrong.
+_DOI_PUBLISHER_PATTERNS: dict[str, list[str]] = {
+    "10.1126/science": ["science"],
+    "10.1038/s41586": ["nature"],
+    "10.1038/s41556": ["nature cell biology"],
+    "10.1038/s41587": ["nature biotechnology"],
+    "10.1038/s41592": ["nature methods"],
+    "10.1038/nmeth": ["nature methods"],
+    "10.1038/s41467": ["nature communications"],
+    "10.1016/j.cell": ["cell"],
+    "10.7554/elife": ["elife"],
+    "10.1083/jcb": ["journal of cell biology"],
+    "10.1101/": ["biorxiv", "medrxiv", "preprint"],
+    "10.1074/jbc": ["journal of biological chemistry"],
+    "10.1073/pnas": ["proceedings of the national academy"],
+    "10.15252/embj": ["embo journal"],
+    "10.1109/": ["ieee"],
+    "10.1371/journal.pgen": ["plos genetics"],
+    "10.1371/journal.pbio": ["plos biology"],
+    "10.1371/journal.pone": ["plos one"],
+    "10.1021/acs.jproteome": ["journal of proteome research"],
+    "10.1093/bioinformatics": ["bioinformatics"],
+    "10.1016/j.bpj": ["biophysical journal"],
+    "10.1016/j.sbi": ["current opinion in structural biology"],
+}
+
+
+def _validate_doi_journal(doi: str, journal: str | None) -> bool:
+    """Check whether a DOI plausibly belongs to the given journal.
+
+    Returns True if validation passes or is inconclusive (unknown prefix).
+    Returns False only when there's a clear mismatch.
+    """
+    if not doi or not journal:
+        return True  # Can't validate — assume ok
+
+    doi_lower = doi.lower()
+    journal_lower = journal.lower()
+
+    for prefix, expected_patterns in _DOI_PUBLISHER_PATTERNS.items():
+        if doi_lower.startswith(prefix.lower()):
+            # This DOI has a known prefix — check if journal matches
+            if any(pat in journal_lower for pat in expected_patterns):
+                return True
+            logger.warning(
+                "DOI/journal mismatch: DOI %s (prefix %s) vs journal '%s'",
+                doi, prefix, journal,
+            )
+            return False
+
+    return True  # Unknown prefix — can't invalidate

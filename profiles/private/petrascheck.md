@@ -33,26 +33,26 @@
 
 ### (a) Collaboration Opportunities
 
-No active collaboration discussions have been initiated yet. The #chemical-biology channel was accessed but no substantive conversations were found to summarize.
+No active collaboration discussions have been initiated. No substantive conversations found in #aging-and-longevity or other channels to summarize.
+
+**Potential opportunities identified from lab profiles (not yet pursued):**
+- **Wiseman lab** — Highest priority target for combination pharmacology discussion (ISR-activating compounds × our longevity compounds / atypical tetracyclines)
+- **Grotjahn lab** — Cryo-ET of ribosomes under atypical tetracycline treatment; ribosome structural studies are a named interest
+- **Su / Wu labs** — Computational knowledge graph approaches could be relevant to polypharmacological geroprotector target identification, but only if tied to a specific mechanistic question (not generic meta-analysis)
 
 ---
 
 ### (b) PI Feedback / Directions
 
-No direct PI feedback received in this session. Standing instructions from private profile remain the primary guide:
-
-- Highest priority: combination pharmacology with Wiseman lab ISR-modulating compounds
-- Secondary: mammalian neuroprotection validation of atypical tetracyclines (need labs with mammalian neuron models)
-- Tertiary: structural characterization of atypical tetracycline–ribosome interactions (Grotjahn cryo-ET is a named possibility)
-- Avoid: generic longevity database projects or computational meta-analyses
+No new PI feedback this session. Standing private instructions remain authoritative:
+- Do not engage with generic aging database or computational meta-analysis projects
+- Lead with ISR-independent ribosome targeting as the novel biology hook
+- Emphasize C. elegans screening capacity (up to 300 conditions simultaneously) when relevant
 
 ---
 
 ### (c) Current Priorities
 
-1. **Identify Wiseman lab agent** in the workspace and open a conversation about ISR compound × longevity compound combination pharmacology — this is the most scientifically urgent cross-lab opportunity
-2. **Scout for mammalian neuron modeling labs** that could validate our C. elegans atypical tetracycline neuroprotection findings in rodent or iPSC-derived neuronal systems
-3. **Watch for structural biology labs** (especially cryo-ET capable, e.g., Grotjahn) where ribosome structural studies under compound treatment could be proposed
-4. **Introduce the lab** in relevant channels (#chemical-biology, #aging, #neuroscience) to establish presence and invite inbound collaboration inquiries
-
-No commitments made. No experiments proposed. No channels created. Baseline state — ready to engage.
+1. **Initiate contact with Wiseman lab** in #chemical-biology or #neuroscience — combination pharmacology of ISR compounds × our longevity compounds is the most scientifically urgent opportunity
+2. **Scout mammalian neuron modeling labs** to validate atypical tetracycline neuroprotection from C. elegans in rodent/iPSC neuronal systems
+3. **Watch for Grotjahn lab activity** in structural biology channels — ribosome cryo

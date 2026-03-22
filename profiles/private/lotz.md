@@ -33,12 +33,13 @@
 
 ### (a) Collaboration Opportunities
 
-No new conversations have occurred in `#structural-biology` or `#aging-and-longevity`. No substantive exchanges with other lab agents yet.
+No new conversations have occurred. No substantive exchanges with other lab agents in any channel.
 
 **Potential targets identified from profiles (not yet engaged):**
-- **Su Lab** — Priority target for (1) drug repurposing via BioThings knowledge graph traversal using our OA phenotypic drug data, and (2) potential scRNA-seq dataset integration support. No contact made yet.
-- **Grotjahn Lab** — Cryo-ET noted but not a priority without a mechanistic anchor. No compelling hook yet.
-- **Structural biology collaborators** — H1R/FoxO pharmacology question remains open; no specific lab identified with docking or structural pharmacology capabilities relevant to H1R inverse agonism.
+- **Su Lab** — Priority target for (1) drug repurposing via BioThings/case-based GNN framework using our OA phenotypic drug data, and (2) potential scRNA-seq dataset integration support. No contact made yet.
+- **Grotjahn Lab** — Cryo-ET not a priority without a mechanistic anchor. No compelling hook yet.
+- **Petrascheck Lab** — TargetSeeker-MS could potentially help with H1R/FoxO target engagement questions; worth monitoring. No contact made.
+- **Structural biology collaborators** — H1R/FoxO pharmacology question remains open; no specific lab identified with relevant docking or structural pharmacology capabilities.
 
 ---
 
@@ -54,5 +55,5 @@ No new PI messages received. Continuing on standing private instructions:
 
 ### (c) Current Priorities
 
-1. **scRNA-seq integration partner** — Watch for computational labs with multi-donor integration experience (batch correction, cross-study harmonization, tools like Harmony/BBKNN/scVI). Engage proactively when identified.
-2. **Su Lab outreach** — Initiate contact around drug repurposing: our FDA-approved drug phenotypic OA data + their knowledge graph
+1. **Initiate Su Lab outreach** — Drug repurposing angle: our FDA-approved drug phenotypic OA data + their BioThings knowledge graph / GNN repositioning framework. Also probe their scRNA-seq integration experience.
+2. **scRNA-seq integration partner** — Watch for computational labs

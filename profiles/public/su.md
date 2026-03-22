@@ -6,93 +6,91 @@
 
 ## Research Summary
 
-The Su lab at The Scripps Research Institute develops and applies computational infrastructure for biomedical knowledge integration, with a focus on knowledge graphs, biomedical APIs, and data-driven drug repositioning. A central contribution is the BioThings ecosystem, including the BioThings SDK for building high-performance biomedical data APIs and BioThings Explorer, a federated knowledge graph query engine that chains over sixty biomedical web services to enable multi-step reasoning without centralized data storage. The lab has applied these tools to drug repurposing through knowledge graph completion methods, culminating in resources such as DrugMechDB, a curated database of drug mechanism paths, and MechRepoNet, a heterogeneous knowledge graph designed to capture mechanistic drug-disease relationships. Recent work integrates large language models with federated knowledge retrieval (BTE-RAG), substantially improving factual accuracy in biomedical question answering. The lab has been a core contributor to the NCATS Biomedical Data Translator Consortium and the Biolink Model for standardizing knowledge graph schemas. During the COVID-19 pandemic, the lab developed Outbreak.info for real-time genomic surveillance and research resource discovery. Additional efforts include promoting FAIR data practices through Schema.org-based metadata standards, crowdsourced biomedical curation via Wikidata and the Gene Wiki project, and citizen science approaches to relationship extraction from biomedical literature. The lab also contributes to the NIAID Data Ecosystem Discovery Portal and the Consortium for Viral Systems Biology.
+The Su Lab at The Scripps Research Institute develops computational infrastructure and knowledge-driven approaches to integrate, harmonize, and reason over large-scale biomedical data. A central theme is the construction and application of biomedical knowledge graphs, exemplified by the BioThings ecosystem—a suite of high-performance APIs and the BioThings Explorer platform that federates over sixty biomedical knowledge sources into a virtual, queryable knowledge graph. This infrastructure has been applied extensively to drug repositioning, including the development of DrugMechDB, a curated database of drug mechanism paths, and explainable graph neural network frameworks (DBR-X) that provide mechanistic rationale for predicted drug-disease associations. The lab has leveraged these tools for Alzheimer's disease drug repurposing using knowledge graph completion methods combined with insurance claims data analysis. During the COVID-19 pandemic, the lab built Outbreak.info, a widely used platform for real-time genomic surveillance of SARS-CoV-2 variants and a standardized research library for COVID-19 resources. The lab also contributes to community knowledge curation through Wikidata and the Gene Wiki project, advancing FAIR data principles via Schema.org-based metadata standards. More recently, the lab has integrated retrieval-augmented generation with large language models (BTE-RAG) to reduce hallucinations in biomedical question answering, and participates in the NIH Biomedical Data Translator Consortium, building federated systems for translational knowledge discovery.
 
 ## Key Methods and Technologies
 
-- Knowledge graph construction and querying
-- Graph neural networks for link prediction and drug repositioning (e.g., DBR-X)
-- Knowledge graph embedding methods for drug-disease association prediction
+- Biomedical knowledge graph construction and querying
+- Graph neural networks for link prediction and drug repositioning (DBR-X)
 - Retrieval-augmented generation (RAG) with large language models
-- Federated API query chaining via BioThings Explorer
-- High-performance biomedical API development using BioThings SDK
-- Schema.org-based metadata standardization and harmonization
-- Biomedical natural language processing and text mining
-- Citizen science-based relationship extraction from biomedical abstracts (Mark2Cure)
-- SARS-CoV-2 genomic surveillance and lineage tracking (Outbreak.info)
-- Maximum likelihood phylogenetic inference (IQ-TREE, MAFFT alignment)
-- Automated Wikidata bot development for knowledge synchronization
-- Shape Expressions for entity schema modeling
+- Federated API integration and web service chaining (BioThings Explorer)
+- High-performance API development using BioThings SDK
+- Knowledge graph embedding methods for link prediction
+- Path-based reasoning over heterogeneous knowledge graphs
+- Schema.org metadata standardization and FAIR data compliance
+- Crowdsourced and citizen science-based relationship extraction from biomedical text
+- Genomic surveillance and phylogenetic analysis of viral variants (SARS-CoV-2)
+- Large-scale metadata harmonization across biomedical repositories
 - Insurance claims data mining for drug-disease association studies
-- Crowdsourced biomedical ontology curation
+- Natural language processing for biomedical literature mining
+- Wikidata bot development for automated knowledge base synchronization
+- Shape Expressions for schema modeling in knowledge graphs
 
 ## Model Systems
 
 - BioThings Explorer federated knowledge graph
 - DrugMechDB curated drug mechanism database
-- MechRepoNet heterogeneous biomedical knowledge graph
-- Biolink Model standardized knowledge graph schema
+- MechRepoNet heterogeneous knowledge graph
+- Outbreak.info SARS-CoV-2 variant surveillance platform
 - Wikidata as a biomedical knowledge graph
-- GISAID SARS-CoV-2 genomic sequence database
-- Outbreak.info COVID-19 research library and genomic reports platform
+- GISAID SARS-CoV-2 genome database
 - NIAID Data Ecosystem Discovery Portal
-- Schema Playground and Data Discovery Engine
+- Biomedical Data Translator system
 - BioGPS gene annotation portal
-- Gene Wiki / Wikipedia-based gene annotation system
-- Blue Cross-Blue Shield Axis commercial insurance claims database
-- TCGA (The Cancer Genome Atlas) gene expression and survival datasets
-- GTEx (Genotype-Tissue Expression) RNA-seq database
+- Gene Wiki / Wikipedia-based community curation
+- Blue Cross Blue Shield Axis commercial insurance claims database
+- TCGA (The Cancer Genome Atlas) multi-omics datasets
+- Genotype-Tissue Expression (GTEx) database
+- Schema Playground browser-based metadata tool
+- Mark2Cure citizen science platform
 
 ## Disease Areas / Biological Processes
 
-- Drug repositioning and repurposing
 - Alzheimer's disease
-- COVID-19 and SARS-CoV-2 genomic epidemiology
+- COVID-19 / SARS-CoV-2
+- Drug repositioning and repurposing
 - Infectious and immune-mediated diseases
 - Type 1 diabetes
-- Ulcerative colitis
 - Rare diseases
 - Osteoarthritis
-- Cancer (pan-cancer genomic and transcriptomic analysis)
-- Fanconi anemia
+- Ulcerative colitis
+- Cancer (pan-cancer genomics)
 - Drug-induced liver injury
 
 ## Key Molecular Targets
 
-- DrugMechDB drug mechanism paths
-- Biolink Model predicates and categories
-- Aminoacyl-tRNA synthetases (aaRSs) in cancer
-- Mohawk (MKX) transcription factor in meniscus
-- Serine-type endopeptidases in gut microbiome
-- SARS-CoV-2 proteome and genome
-- Insulin-reactive CD4 T cells in type 1 diabetes
+- SARS-CoV-2 viral proteome and genome
+- Mohawk (MKX) transcription factor
+- Aminoacyl-tRNA synthetases (aaRSs)
+- Biolink Model standardized predicates and categories
+- Serine-type endopeptidases (gut microbiome)
 
 ## Keywords
 
-FAIR data principles, Biomedical Data Translator Consortium, Consortium for Viral Systems Biology (CViSB), Knowledge graph completion, Federated knowledge integration, Open science, Crowdsourcing, Metadata harmonization, Schema.org, Gene annotation, API federation, Computational drug repositioning, Explainable AI in biomedicine, Genomic surveillance, Biomedical ontologies
+knowledge graphs, FAIR data principles, drug repurposing, biomedical APIs, federated data integration, retrieval-augmented generation, large language models, open science, community curation, citizen science, genomic surveillance, metadata harmonization, Schema.org, translational science, Biomedical Data Translator Consortium, Consortium for Viral Systems Biology
 
 ## Recent Publications
 
-- The NIAID Discovery Portal: a unified search engine for infectious and immune-mediated disease datasets. *mSystems*. (2026). https://doi.org/10.1186/1471-2105-6-S1-S1
 - A case-based explainable graph neural network framework for mechanistic drug repositioning. *Bioinformatics (Oxford, England)*. (2026). https://doi.org/10.1093/bioinformatics/btag008
-- Federated knowledge retrieval elevates large language model performance on biomedical benchmarks. *GigaScience*. (2026). https://doi.org/10.1038/s41467-022-32205-3
-- Announcing the Biomedical Data Translator: Initial Public Release. *Clinical and translational science*. (2025). https://doi.org/10.1016/j.jaip.2021.08.024
+- Federated knowledge retrieval elevates large language model performance on biomedical benchmarks. *GigaScience*. (2026). https://doi.org/10.1093/gigascience/giag007
+- The NIAID Discovery Portal: a unified search engine for infectious and immune-mediated disease datasets. *mSystems*. (2026). https://doi.org/10.1128/msystems.01270-25
+- Announcing the Biomedical Data Translator: Initial Public Release. *Clinical and translational science*. (2025). https://doi.org/10.1111/cts.70284
 - Lessons Learned from a Bioinformatics Class: What Is . *Journal of proteome research*. (2025). https://doi.org/10.1021/acs.jproteome.5c00436
-- Federated Knowledge Retrieval Elevates Large Language Model Performance on Biomedical Benchmarks. *bioRxiv : the preprint server for biology*. (2025). https://doi.org/10.1007/978-981-99-7962-2_30
-- Perspectives on tracking data reuse across biodata resources. *Bioinformatics advances*. (2024). https://doi.org/10.1101/2023.11.20.567935
+- Federated Knowledge Retrieval Elevates Large Language Model Performance on Biomedical Benchmarks. *bioRxiv : the preprint server for biology*. (2025). https://doi.org/10.1101/2025.08.01.668022
+- Perspectives on tracking data reuse across biodata resources. *Bioinformatics advances*. (2024). https://doi.org/10.1093/bioadv/vbae057
+- Drug Repurposing using consilience of Knowledge Graph Completion methods. *bioRxiv : the preprint server for biology*. (2024). https://doi.org/10.1101/2023.05.12.540594
 - Repositioning the Early Pathology of Type 1 Diabetes to the Extraislet Vasculature. *Journal of immunology (Baltimore, Md. : 1950)*. (2024). https://doi.org/10.4049/jimmunol.2300769
-- Drug Repurposing using consilience of Knowledge Graph Completion methods. *bioRxiv : the preprint server for biology*. (2024). https://doi.org/10.1093/toxsci/kfl184
-- An approach for collaborative development of a federated biomedical knowledge graph-based question-answering system: Question-of-the-Month challenges. *Journal of clinical and translational science*. (2023). https://doi.org/10.1093/bioinformatics/bts591
-- Addressing barriers in FAIR data practices for biomedical data. *Scientific data*. (2023). https://doi.org/10.2196/20028
-- Outbreak.info genomic reports: scalable and dynamic surveillance of SARS-CoV-2 variants and mutations. *Nature methods*. (2023). https://doi.org/10.1093/bioinformatics/btac017
-- Association study between drug prescriptions and Alzheimer's disease claims in a commercial insurance database. *Alzheimer's research & therapy*. (2023). https://doi.org/10.1056/NEJMsa1807069
-- Developing a standardized but extendable framework to increase the findability of infectious disease datasets. *Scientific data*. (2023). https://doi.org/10.5281/zenodo.6816052
-- Outbreak.info Research Library: a standardized, searchable platform to discover and explore COVID-19 resources. *Nature methods*. (2023). https://doi.org/10.1101/2021.09.02.458726
-- Author Correction: A protocol for adding knowledge to Wikidata: aligning resources on human coronaviruses. *BMC biology*. (2023). https://doi.org/10.1186/s12915-020-00940-y
-- DrugMechDB: A Curated Database of Drug Mechanisms. *Scientific data*. (2023). https://doi.org/10.1093/nar/gkaa1043
-- DrugMechDB: A Curated Database of Drug Mechanisms. *bioRxiv : the preprint server for biology*. (2023). https://doi.org/10.1093/bioinformatics/btac205
-- BioThings Explorer: a query engine for a federated knowledge graph of biomedical APIs. *Bioinformatics (Oxford, England)*. (2023). https://doi.org/10.1007/978-3-319-58451-5_11#chapter-info
-- Schema Playground: a tool for authoring, extending, and using metadata schemas to improve FAIRness of biomedical data. *BMC bioinformatics*. (2023). https://doi.org/10.3390/nano10102033
+- An approach for collaborative development of a federated biomedical knowledge graph-based question-answering system: Question-of-the-Month challenges. *Journal of clinical and translational science*. (2023). https://doi.org/10.1017/cts.2023.619
+- Addressing barriers in FAIR data practices for biomedical data. *Scientific data*. (2023). https://doi.org/10.1038/s41597-023-01969-8
+- Outbreak.info genomic reports: scalable and dynamic surveillance of SARS-CoV-2 variants and mutations. *Nature methods*. (2023). https://doi.org/10.1038/s41592-023-01769-3
+- BioThings Explorer: a query engine for a federated knowledge graph of biomedical APIs. *Bioinformatics (Oxford, England)*. (2023). https://doi.org/10.1093/bioinformatics/btad570
+- Author Correction: A protocol for adding knowledge to Wikidata: aligning resources on human coronaviruses. *BMC biology*. (2023). https://doi.org/10.1186/s12915-023-01764-2
+- DrugMechDB: A Curated Database of Drug Mechanisms. *Scientific data*. (2023). https://doi.org/10.1038/s41597-023-02534-z
+- DrugMechDB: A Curated Database of Drug Mechanisms. *bioRxiv : the preprint server for biology*. (2023). https://doi.org/10.1101/2023.05.01.538993
+- Schema Playground: a tool for authoring, extending, and using metadata schemas to improve FAIRness of biomedical data. *BMC bioinformatics*. (2023). https://doi.org/10.1186/s12859-023-05258-4
+- Association study between drug prescriptions and Alzheimer's disease claims in a commercial insurance database. *Alzheimer's research & therapy*. (2023). https://doi.org/10.1186/s13195-023-01255-0
+- Developing a standardized but extendable framework to increase the findability of infectious disease datasets. *Scientific data*. (2023). https://doi.org/10.1038/s41597-023-01968-9
+- Outbreak.info Research Library: a standardized, searchable platform to discover and explore COVID-19 resources. *Nature methods*. (2023). https://doi.org/10.1038/s41592-023-01770-w
 
 ## Active Grants
 
