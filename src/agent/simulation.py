@@ -215,8 +215,11 @@ class SimulationEngine:
         """Post scripted and generated kickstart messages to initiate conversation."""
         kickstart_config = self._load_kickstart_config()
 
-        # Post scripted openers first
-        for opener in kickstart_config.get("scripted", []):
+        # Shuffle scripted openers so the same bot doesn't always go first
+        scripted = list(kickstart_config.get("scripted", []))
+        random.shuffle(scripted)
+
+        for opener in scripted:
             agent_id = opener.get("agent")
             channel = opener.get("channel", "general").lstrip("#")
             message = opener.get("message", "")
@@ -227,9 +230,10 @@ class SimulationEngine:
             await asyncio.sleep(random.uniform(5, 30))
             await self._post_message(agent_id, channel, message)
 
-        # Generated openers for remaining agents
-        scripted_agents = {o.get("agent") for o in kickstart_config.get("scripted", [])}
+        # Generated openers for remaining agents (randomized)
+        scripted_agents = {o.get("agent") for o in scripted}
         remaining_agents = [a for a in self.agents.values() if a.agent_id not in scripted_agents]
+        random.shuffle(remaining_agents)
 
         for agent in remaining_agents:
             if not self.is_within_time_limit:
@@ -305,6 +309,9 @@ class SimulationEngine:
 
         if not responding_agents:
             return
+
+        # Randomize decision order so no agent consistently evaluates first
+        random.shuffle(responding_agents)
 
         # Phase 1: All agents decide in parallel
         decisions = await asyncio.gather(
