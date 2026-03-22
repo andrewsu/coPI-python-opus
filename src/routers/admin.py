@@ -323,6 +323,13 @@ async def impersonate_user(
                 department=profile_data.get("department"),
             )
             db.add(target)
+            await db.flush()  # get target.id
+            job = Job(
+                type="generate_profile",
+                user_id=target.id,
+                payload={"user_id": str(target.id), "orcid": orcid},
+            )
+            db.add(job)
             await db.commit()
         except Exception as exc:
             logger.error("Failed to fetch ORCID profile for impersonation: %s", exc)
