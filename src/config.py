@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     slack_app_token_ken: str = ""
     slack_bot_token_racki: str = ""
     slack_app_token_racki: str = ""
+    slack_bot_token_saez: str = ""
+    slack_app_token_saez: str = ""
+    slack_bot_token_wu: str = ""
+    slack_app_token_wu: str = ""
 
     # LLM models
     llm_profile_model: str = "claude-opus-4-6"
@@ -72,6 +76,8 @@ class Settings(BaseSettings):
             },
             "ken": {"bot": self.slack_bot_token_ken, "app": self.slack_app_token_ken},
             "racki": {"bot": self.slack_bot_token_racki, "app": self.slack_app_token_racki},
+            "saez": {"bot": self.slack_bot_token_saez, "app": self.slack_app_token_saez},
+            "wu": {"bot": self.slack_bot_token_wu, "app": self.slack_app_token_wu},
         }
 
 

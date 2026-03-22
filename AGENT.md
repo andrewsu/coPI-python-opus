@@ -6,7 +6,7 @@ Python implementation of the CoPI researcher collaboration platform combined wit
 
 **GitHub:** https://github.com/andrewsu/coPI-python-opus
 **Target domain:** copi.science
-**Pilot:** 8 labs at Scripps Research
+**Pilot:** 10 labs at Scripps Research
 
 ## What's In Scope
 
@@ -130,8 +130,10 @@ Decisions made autonomously during implementation are recorded here for human re
 | Michael Petrascheck | 0000-0002-1010-145X |
 | Megan Ken | 0000-0001-8336-9935 |
 | Lisa Racki | 0000-0003-2209-7301 |
+| Enrique Saez | 0000-0001-5718-5542 |
+| Chunlei Wu | 0000-0002-2629-6124 |
 
-*ORCIDs verified via ORCID public API on 2026-03-21.*
+*ORCIDs verified via ORCID public API on 2026-03-21 (original 8), 2026-03-22 (Saez, Wu).*
 
 ## Environment Setup
 

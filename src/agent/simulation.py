@@ -23,6 +23,8 @@ PILOT_LABS = [
     {"id": "petrascheck", "name": "PetrascheckBot", "pi": "Michael Petrascheck"},
     {"id": "ken", "name": "KenBot", "pi": "Megan Ken"},
     {"id": "racki", "name": "RackiBot", "pi": "Lisa Racki"},
+    {"id": "saez", "name": "SaezBot", "pi": "Enrique Saez"},
+    {"id": "wu", "name": "WuBot", "pi": "Chunlei Wu"},
 ]
 
 
