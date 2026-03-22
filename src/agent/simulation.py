@@ -242,7 +242,10 @@ class SimulationEngine:
                         new_message=msg,
                         action_context=decision.get("reason", ""),
                     )
-                    await self._post_message(agent.agent_id, channel_name, response_text)
+                    # Reply in thread — use the original message's thread_ts if it's
+                    # already in a thread, otherwise use its ts to start a new thread.
+                    thread_ts = msg.get("thread_ts") or msg.get("ts")
+                    await self._post_message(agent.agent_id, channel_name, response_text, thread_ts=thread_ts)
 
                 elif action == "create_channel":
                     # Create a collaboration channel
@@ -268,14 +271,14 @@ class SimulationEngine:
             new_message=msg,
         )
 
-    async def _post_message(self, agent_id: str, channel: str, text: str) -> None:
+    async def _post_message(self, agent_id: str, channel: str, text: str, thread_ts: str | None = None) -> None:
         """Post a message and record it in the database."""
         client = self.slack_clients.get(agent_id)
         agent = self.agents.get(agent_id)
 
         result = None
         if client:
-            result = client.post_message(channel, text)
+            result = client.post_message(channel, text, thread_ts=thread_ts)
         else:
             logger.info("[%s] MOCK post to #%s: %s...", agent_id, channel, text[:60])
 

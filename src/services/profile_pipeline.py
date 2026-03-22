@@ -282,6 +282,11 @@ async def run_profile_pipeline(
         profile.profile_generated_at = datetime.now(timezone.utc)
 
     await db.flush()
+
+    # Export to markdown for agent consumption
+    from src.services.profile_export import export_profile_to_markdown
+    export_profile_to_markdown(user, profile)
+
     update_progress("complete", "Profile generation complete.")
     return profile
 

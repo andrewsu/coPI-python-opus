@@ -104,6 +104,11 @@ async def save_profile(
     profile.profile_version = (profile.profile_version or 0) + 1
 
     await db.commit()
+
+    # Export to markdown for agent consumption
+    from src.services.profile_export import export_profile_to_markdown
+    export_profile_to_markdown(current_user, profile)
+
     return RedirectResponse(url="/onboarding/add-texts", status_code=302)
 
 

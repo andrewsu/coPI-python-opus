@@ -89,6 +89,7 @@ class AgentSlackClient:
                 "sender_id": event.get("user"),
                 "content": event.get("text", ""),
                 "ts": event.get("ts"),
+                "thread_ts": event.get("thread_ts"),
             })
 
     def _resolve_channel_name(self, client, channel_id: str) -> str:
@@ -128,19 +129,21 @@ class AgentSlackClient:
             logger.warning("[%s] Failed to resolve channel name '%s': %s", self.agent_id, channel, exc)
         return channel
 
-    def post_message(self, channel: str, text: str) -> dict | None:
-        """Post a message to a Slack channel (accepts name or ID)."""
+    def post_message(self, channel: str, text: str, thread_ts: str | None = None) -> dict | None:
+        """Post a message to a Slack channel (accepts name or ID). Uses thread_ts to reply in a thread."""
         if not self._app:
             logger.info("[%s] MOCK post to #%s: %s", self.agent_id, channel, text[:80])
             return {"ts": "mock_ts", "channel": channel}
         channel_id = self._resolve_channel_id(channel)
         try:
-            # Join the channel first in case the bot isn't a member
             self._app.client.conversations_join(channel=channel_id)
         except Exception:
-            pass  # Already a member or can't join
+            pass
         try:
-            result = self._app.client.chat_postMessage(channel=channel_id, text=text)
+            kwargs = {"channel": channel_id, "text": text}
+            if thread_ts:
+                kwargs["thread_ts"] = thread_ts
+            result = self._app.client.chat_postMessage(**kwargs)
             return result.data
         except Exception as exc:
             logger.error("[%s] Failed to post message to #%s: %s", self.agent_id, channel, exc)

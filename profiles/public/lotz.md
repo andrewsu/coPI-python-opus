@@ -1,61 +1,65 @@
-# Lotz Lab — Public Profile
+# Martin Lotz Lab — Public Profile
 
-**PI:** Martin Lotz, MD
-**Department:** Molecular and Cellular Biology (Molecular Medicine), Scripps Research
-**Lab:** Lotz Lab
+**PI:** Martin Lotz
+**Institution:** The Scripps Research Institute
+**Department:** Molecular and Cellular Medicine and Dept of Molecular Medicine
 
-## Research Areas
+## Research Summary
 
-The Lotz lab investigates the molecular mechanisms of osteoarthritis (OA), cartilage degeneration,
-and intervertebral disc disease, with a focus on identifying disease-modifying therapeutic targets.
-We bridge basic cell biology of chondrocytes and disc cells with translational studies in human
-patient samples and animal models.
-
-**Key focus areas:**
-- **Osteoarthritis (OA)** — chondrocyte biology, cartilage matrix homeostasis, inflammation-driven degeneration
-- **Intervertebral disc (IVD) disease** — nucleus pulposus and annulus fibrosus biology, disc cell senescence
-- **Aging and cellular senescence** — senescence-associated secretory phenotype (SASP) in cartilage and disc
-- **Drug repurposing** — identifying FDA-approved drugs that modulate OA-relevant pathways (FoxO, H1R, mTOR)
-- **Single-cell transcriptomics of musculoskeletal tissues** — mapping cell heterogeneity in human OA/healthy cartilage and disc
+The Lotz laboratory at The Scripps Research Institute investigates the molecular mechanisms underlying joint aging, osteoarthritis (OA) pathogenesis, and cartilage biology, with a particular emphasis on transcription factor networks that govern tissue homeostasis and degeneration. A central theme of the lab's work is the role of FoxO transcription factors in joint aging and osteoarthritis, extending this framework to intervertebral disc aging and degeneration. Complementary studies examine KLF4 as a regulator of joint degradation and regeneration, providing insight into transcriptional programs that balance catabolic and anabolic processes in cartilage and related tissues. Recent efforts have embraced high-resolution and integrative approaches, including 3D mapping of cellular heterogeneity within mineralized tissues and integrative multi-omics analysis of human cartilage across aging and OA progression. These studies aim to define the molecular taxonomy of chondrocyte subpopulations and identify disease-driving cell states. A newer research direction involves mapping the joint-nerve interactome of the knee, reflecting an interest in neuro-articular crosstalk that may underlie OA-associated pain and joint dysfunction. Collectively, this research program integrates transcriptomics, spatial biology, and molecular genetics to elucidate fundamental mechanisms of joint homeostasis and disease, with translational implications for developing targeted therapies for osteoarthritis and age-related musculoskeletal disorders.
 
 ## Key Methods and Technologies
 
-- Single-cell RNA sequencing (scRNA-seq) of human cartilage and disc tissue
-- Ex vivo human cartilage explant cultures (primary human tissue)
-- Chondrocyte isolation and primary culture from human donors
-- CRISPR-Cas9 gene editing in chondrocyte cell lines
-- Mouse OA models (destabilization of medial meniscus, aging)
-- Histological scoring of cartilage degeneration (OARSI scoring)
-- Proteomics of secreted factors (SASP profiling)
-- High-throughput drug screening in chondrocyte reporters
-- Bioinformatics analysis of scRNA-seq data (Seurat, CellChat)
+- Integrative multi-omics analysis (transcriptomics, proteomics, metabolomics)
+- Single-cell RNA sequencing (scRNA-seq) of cartilage and joint tissues
+- High-resolution 3D imaging and spatial mapping of mineralized tissues
+- Conditional and tissue-specific gene knockout mouse models
+- Histological and immunohistochemical analysis of joint tissues
+- Bulk RNA-seq and gene expression profiling
+- Interactome mapping of joint-nerve signaling networks
+- Chromatin and transcription factor binding analyses
+- In vitro chondrocyte culture and functional assays
+- Bioinformatic integration of multi-omics datasets
 
 ## Model Systems
 
-- Primary human articular chondrocytes (from OA and healthy donors via biobank)
-- Human intervertebral disc cells (nucleus pulposus, annulus fibrosus)
-- ATDC5 chondrocyte cell line
-- Destabilization of medial meniscus (DMM) mouse OA model
-- Aging mouse (24-month C57BL/6)
-- Human cartilage and disc tissue biobank (>200 donors, paired OA/healthy)
+- Human articular cartilage explants (aging and OA specimens)
+- Human intervertebral disc tissue
+- FoxO conditional knockout mice (joint and disc-specific)
+- KLF4 knockout and transgenic mouse models
+- Murine models of osteoarthritis (surgical and aging models)
+- Primary human chondrocytes
+- Murine knee joint tissues for neuro-articular interactome studies
+- Mineralized tissue specimens for 3D cellular heterogeneity mapping
 
-## Current Active Projects
+## Disease Areas / Biological Processes
 
-1. **FoxO transcription factor network in OA** — FoxO1/3/4 as regulators of chondrocyte autophagy and stress resistance; cyproheptadine and H1R inverse agonism as a mechanism to activate FoxO
-2. **Single-cell atlas of human IVD disease** — comprehensive scRNA-seq atlas of healthy and degenerating human disc across the degeneration spectrum; identifying driver cell states
-3. **Senolytic therapy for OA** — testing senolytic compounds (navitoclax, dasatinib/quercetin) in human cartilage explants and mouse OA models
-4. **SASP profiling in cartilage** — mass spectrometry-based proteomics of secreted factors from senescent chondrocytes to identify therapeutic targets
+- Osteoarthritis
+- Joint aging
+- Intervertebral disc degeneration
+- Cartilage degradation and repair
+- Age-related musculoskeletal disorders
+- OA-associated pain and neuro-articular dysfunction
 
-## Open Questions / Areas Seeking Collaborators
+## Key Molecular Targets
 
-- **Integration of multi-donor scRNA-seq datasets** — seeking computational biology expertise to integrate our IVD/cartilage datasets with published datasets; batch correction across donors/studies
-- **Structural basis of drug-target interactions** — understanding why certain H1R ligands activate FoxO while others don't; structural biology or computational docking approaches
-- **Drug repurposing validation** — knowledge graph or network medicine approaches to identify additional compounds targeting OA-relevant pathways (FoxO, mTOR, autophagy)
-- **In vivo senolytic testing** — collaboration on IND-enabling studies for senolytic therapy in OA
+- FoxO transcription factors (FoxO1, FoxO3, FoxO4)
+- KLF4 (Krüppel-like factor 4)
+- Cartilage extracellular matrix components (aggrecan, type II collagen)
+- Matrix metalloproteinases (MMPs)
+- ADAMTS family proteases
+- Joint-nerve interactome signaling molecules
+- Autophagy and cellular senescence pathways in chondrocytes
 
-## Available Resources / Unique Capabilities
+## Keywords
 
-- **Human tissue biobank** — >200 donors, articular cartilage and IVD tissue with clinical metadata; available for collaborative studies with appropriate data sharing agreements
-- **scRNA-seq datasets** — 10x Genomics datasets from OA/healthy human cartilage and disc; can share processed datasets
-- **Primary human chondrocyte protocol** — optimized isolation and culture system from human articular cartilage
-- **DMM mouse OA colony** — established mouse OA model colony
+Chondrocyte heterogeneity, Joint homeostasis, Cartilage aging, Transcriptional regulation in musculoskeletal tissues, Spatial transcriptomics, Mineralized tissue biology, Neuro-articular crosstalk, Regenerative joint biology, Multi-omics integration, Age-related cartilage degeneration
+
+## Active Grants
+
+- Mapping the joint-nerve interactome of the knee
+- High resolution 3D mapping of cellular heterogeneity within multiple types of mineralized tissues
+- FoxO transcription factors in joint aging and osteoarthritis pathogenesis
+- Integrative Omics analysis of human cartilage in aging and osteoarthritis
+- FOXO transcription factors as critical regulators of intervertebral disc aging
+- KLF4 in joint degradation and regeneration

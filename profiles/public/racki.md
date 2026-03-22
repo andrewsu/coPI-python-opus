@@ -1,58 +1,49 @@
-# Racki Lab — Public Profile
+# Lisa Racki Lab — Public Profile
 
-**PI:** Lisa Racki, PhD
-**Department:** Integrative Structural and Computational Biology (ISCB), Scripps Research
-**Lab:** Racki Lab
+**PI:** Lisa Racki
+**Institution:** Scripps Research Institute
+**Department:** Integrative Structural and Computational Biology
 
-## Research Areas
+## Research Summary
 
-The Racki lab investigates how bacteria survive starvation and environmental stress, with a focus
-on the polyphosphate-mediated chromatin remodeling that enables Pseudomonas aeruginosa to persist
-in chronic infection contexts. We use cryo-electron tomography to visualize these structural
-reorganizations in situ and biochemical approaches to understand the molecular mechanisms.
-
-**Key focus areas:**
-- **Bacterial starvation survival** — how bacteria restructure their metabolism and chromosome under nutrient deprivation
-- **Polyphosphate biology** — the multifunctional roles of inorganic polyphosphate (polyP) in bacterial physiology and pathogenesis
-- **Chromatin remodeling in bacteria** — how nucleoid-associated proteins and polyP reorganize the bacterial chromosome under stress
-- **Pseudomonas aeruginosa** — opportunistic pathogen, chronic lung infection in CF patients, antibiotic tolerance
-- **In situ structural biology** — cryo-ET of bacterial cells under different physiological conditions
+The Racki lab investigates the molecular mechanisms underlying chromatin remodeling and bacterial stress responses, with a particular focus on how ATP-dependent enzymes reorganize nucleosome structure and how bacteria adapt to starvation conditions. Early independent work characterized the dimeric motor mechanism of the chromatin remodeling complex ACF, demonstrating that two ATPase subunits cooperate to achieve processive bidirectional nucleosome sliding — a mechanism distinct from classical dimeric motors like kinesin. Complementary structural and biophysical studies revealed how the histone H4 tail regulates ATPase activity by promoting closure of the ATP-binding pocket in the SNF2h remodeling enzyme, providing insight into how substrate recognition is coupled to catalytic activation. More recently, the lab has shifted focus toward understanding polyphosphate granule biogenesis in bacteria, using quantitative high-resolution microscopy to demonstrate that granule formation is temporally and functionally linked to cell cycle exit during starvation. This work connects fundamental questions about bacterial quiescence and stress resistance to the ancient and conserved polyphosphate metabolism pathway. Across these research areas, the lab employs a combination of quantitative imaging, electron microscopy, electron paramagnetic resonance spectroscopy, and biochemical reconstitution to address mechanistic questions about macromolecular dynamics and cellular adaptation.
 
 ## Key Methods and Technologies
 
-- Cryo-electron tomography (cryo-ET) of intact bacterial cells
-- Cryo-focused ion beam milling (cryo-FIB-SEM) for bacterial cell thinning
-- Subtomogram averaging of bacterial complexes
-- Polyphosphate detection and quantification (DAPI staining, 31P NMR)
-- Bacterial genetics (transposon mutagenesis, targeted knockouts in P. aeruginosa)
-- Transcriptomics (RNA-seq under starvation conditions)
-- Biochemical reconstitution of chromatin remodeling complexes
-- Biofilm formation assays
+- electron paramagnetic resonance (EPR) spectroscopy with spin-labeled nucleotide analogs
+- single-particle electron microscopy and 3D reconstruction
+- quantitative fluorescence microscopy at high spatial and temporal resolution
+- nucleosome reconstitution and chromatin assembly in vitro
+- site-specific installation of methyl-lysine analogs into recombinant histones
+- ATPase activity assays for chromatin remodeling enzymes
+- chemical protein modification and spin labeling
+- time-resolved imaging of bacterial granule biogenesis
 
 ## Model Systems
 
-- Pseudomonas aeruginosa PA14 and PAO1 strains (wild-type and mutants)
-- Escherichia coli (mechanistic studies, genetic tools)
-- In vitro chromatin reconstitution (bacterial nucleoid protein-DNA complexes)
-- Biofilm and persister cell models
+- Reconstituted nucleosomes with recombinant histones
+- ACF and SNF2h chromatin remodeling complexes
+- Pseudomonas syringae-infected Arabidopsis thaliana
+- Bacterial starvation and quiescence models
+- Rabbit skeletal muscle actin and myosin preparations
+- Drosophila indirect flight muscle fibers
 
-## Current Active Projects
+## Disease Areas / Biological Processes
 
-1. **Cryo-ET atlas of P. aeruginosa starvation response** — systematic cryo-ET imaging of bacterial cells transitioning from growth to starvation; mapping chromosome compaction, membrane changes, and granule formation
-2. **Polyphosphate granule structure** — in situ structure of polyP granules in starved bacteria; how polyP is stored and how it drives chromosome condensation
-3. **Nucleoid-associated protein dynamics** — how Dps, H-NS, and other NAPs reorganize the chromosome during starvation; cryo-ET of protein-DNA interactions in situ
-4. **PolyP-mediated antibiotic tolerance** — how polyP accumulation promotes persister cell formation and antibiotic tolerance in P. aeruginosa biofilms
+- Chromatin regulation and gene silencing
+- Bacterial stress responses and quiescence
+- Polyphosphate metabolism
+- Epigenetic regulation of chromatin structure
 
-## Open Questions / Areas Seeking Collaborators
+## Key Molecular Targets
 
-- **Mammalian host-pathogen interface** — understanding how polyP-mediated bacterial changes affect host immune responses; labs with infection models or host cell biology expertise
-- **Structural comparison across pathogens** — whether polyphosphate-mediated chromosome compaction is conserved across pathogenic bacteria; labs working on Mycobacterium, Staphylococcus, etc.
-- **Cryo-ET method development** — collaborators interested in applying cryo-FIB/cryo-ET to bacterial or other cellular systems; we can provide expertise and instrument access
-- **Anti-virulence strategies targeting polyP** — labs with medicinal chemistry expertise to develop inhibitors of polyphosphate kinase (PPK) or polyphosphatase (PPX) as anti-biofilm agents
+- SNF2h (SMARCA5) ATPase
+- ACF (ATP-dependent chromatin assembly factor) complex
+- ISWI-class chromatin remodeling enzymes
+- Histone H4 N-terminal tail
+- Polyphosphate kinase and polyphosphate granules
+- Methyl-lysine histone modifications (H3K4me, H3K9me, H3K27me)
 
-## Available Resources / Unique Capabilities
+## Keywords
 
-- **Cryo-ET infrastructure for bacteria** — established cryo-FIB-SEM + cryo-ET pipeline specifically optimized for bacterial cells (which are too thick for conventional cryo-ET without thinning)
-- **P. aeruginosa starvation protocols** — validated protocols for inducing and studying bacterial starvation response with quantitative polyP measurements
-- **Bacterial chromatin reconstitution** — ability to reconstitute bacterial nucleoid-associated protein complexes in vitro for biochemical and structural studies
-- **Expertise in polyphosphate biology** — quantification methods, genetics, biochemistry; can consult on polyP-related projects in any organism
+nucleosome spacing, ATP-dependent chromatin remodeling, dimeric motor mechanism, polyphosphate granule biogenesis, bacterial starvation response, histone posttranslational modifications, DExx box helicase superfamily, substrate-coupled ATPase activation, biophysical spectroscopy

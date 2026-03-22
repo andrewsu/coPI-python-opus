@@ -1,59 +1,69 @@
-# Cravatt Lab — Public Profile
+# Benjamin Cravatt Lab — Public Profile
 
-**PI:** Benjamin Cravatt, PhD
-**Department:** Chemistry, Scripps Research
-**Lab:** Cravatt Lab
+**PI:** Benjamin Cravatt
+**Institution:** Scripps Research Institute
+**Department:** Chemistry
 
-## Research Areas
+## Research Summary
 
-The Cravatt lab pioneers chemical proteomics approaches to map the activity and function of enzymes
-and proteins in living systems, and to identify new druggable sites in the proteome. We develop and
-apply activity-based protein profiling (ABPP) to discover covalent ligands for previously undruggable
-targets, with emphasis on cancer, neuroscience, and pain biology.
-
-**Key focus areas:**
-- **Activity-based protein profiling (ABPP)** — chemical probes that react with active-site residues across enzyme families
-- **Covalent ligand discovery** — identifying electrophilic compounds that react with cysteines, serines, and other nucleophilic residues in the proteome
-- **Druggable proteome mapping** — systematic identification of chemically accessible sites in human proteome
-- **Serine hydrolases** — FAAH, MAGL, ABHD proteins; endocannabinoid system pharmacology
-- **Lysine/cysteine reactivity profiling** — competitive ABPP for identifying specific-reactive compounds
+The Cravatt lab at Scripps Research Institute is a leading force in chemical biology, pioneering activity-based protein profiling (ABPP) and chemoproteomic platforms to functionally annotate the proteome. A central theme of the lab's work is the development and application of chemical probes that exploit reactive amino acid residues—particularly cysteines, lysines, and other nucleophilic sites—to discover druggable sites on proteins, including those historically considered 'undruggable.' The lab has made foundational contributions to understanding the endocannabinoid system through the discovery and characterization of fatty acid amide hydrolase (FAAH) and monoacylglycerol lipase (MAGL), establishing these serine hydrolases as therapeutic targets for pain, inflammation, and neurodegeneration. Recent efforts have expanded into covalent ligand discovery at scale, employing electrophilic fragment screening against whole proteomes to map ligandable hotspots on thousands of proteins in living cells and in vivo. The lab integrates quantitative mass spectrometry-based proteomics with medicinal chemistry to translate these discoveries into selective chemical probes and candidate therapeutics. Additionally, the Cravatt group has advanced targeted protein degradation approaches, including covalent molecular glues and heterobifunctional degraders, and has developed platforms for mapping protein-protein interaction interfaces amenable to chemical perturbation. This work bridges fundamental enzymology, systems-level proteomics, and translational drug discovery.
 
 ## Key Methods and Technologies
 
-- Activity-based protein profiling (ABPP) — iodoacetamide-alkyne, phenyl phosphonate, fluorophosphonate probes
-- Competitive isoTOP-ABPP — quantitative measurement of probe-protein interactions
-- LC-MS/MS-based quantitative proteomics (TMT, LFQ)
-- Covalent fragment library screening (~2,000 compound library)
-- Serine hydrolase profiling (FP-TAMRA, FP-biotin)
-- In situ ABPP in intact cells and animal tissues
-- Targeted covalent inhibitor medicinal chemistry
-- Mouse behavioral models (pain, addiction, anxiety)
+- Activity-based protein profiling (ABPP) with broad-spectrum electrophilic probes
+- Gel-based and quantitative LC-MS/MS chemoproteomic profiling
+- Isotopic tandem orthogonal proteolysis-ABPP (isoTOP-ABPP)
+- Covalent fragment-based ligand discovery against native proteomes
+- Competitive ABPP for selectivity profiling of inhibitors
+- Multiplexed quantitative mass spectrometry (TMT-based proteomics)
+- Click chemistry-enabled target identification and enrichment
+- In vivo ABPP in mouse tissues
+- Substrate profiling using fluorogenic and fluorophosphonate probes
+- Targeted protein degradation (PROTACs and molecular glues)
+- Medicinal chemistry and structure-activity relationship optimization of covalent probes
+- Enzyme kinetics and mechanism-based inhibitor characterization
+- Recombinant protein expression and purification for biochemical validation
+- Site-directed mutagenesis for functional validation of liganded residues
+- High-throughput electrophile screening in cell lysates and live cells
 
 ## Model Systems
 
-- Human and mouse cancer cell lines (multiple cancer types for proteome mapping)
-- Primary mouse peritoneal macrophages
-- Mouse brain (in vivo ABPP, behavioral pharmacology)
-- In vitro reconstituted enzyme systems
-- Xenograft tumor models (in vivo drug target engagement)
+- Human cancer cell lines (MDA-MB-231, HEK293T, Ramos, Jurkat, K562, A549, PC3)
+- FAAH knockout mice
+- MAGL knockout mice
+- Mouse tissue proteomes (brain, liver, kidney, heart, lung)
+- Primary mouse T cells and immune cells
+- Patient-derived xenograft models
+- Syngeneic tumor models in mice
+- In situ live-cell chemoproteomic systems
+- Recombinant purified serine hydrolases and metabolic enzymes
 
-## Current Active Projects
+## Disease Areas / Biological Processes
 
-1. **Covalent ligandable proteome** — completed first proteome-wide map of cysteine reactivity; now extending to map PPI-proximal cysteines and low-reactivity sites with expanded probe sets
-2. **MAGL inhibitors for neuroinflammation** — development of CNS-penetrant MAGL inhibitors that modulate endocannabinoid tone in brain; advancing toward IND
-3. **Oncogenic RAS covalent inhibitors** — covalent probes for K-RAS and related oncoproteins beyond G12C; exploring allosteric cysteine sites
-4. **Lysine-reactive covalent ligands** — expanding our ABPP platform to systematically profile lysine reactivity and identify NHS ester-based covalent ligands
+- Cancer (breast, prostate, hematological malignancies)
+- Pain and analgesia
+- Neuroinflammation and neurodegeneration
+- Endocannabinoid signaling and lipid metabolism disorders
+- Immunology and T cell-mediated immunity
+- Metabolic disease
+- Drug discovery for undruggable targets
 
-## Open Questions / Areas Seeking Collaborators
+## Key Molecular Targets
 
-- **Structural characterization of covalent binding sites** — we identify binding sites by mass spectrometry; structural visualization (cryo-EM, X-ray, NMR) needed to understand binding modes, especially at protein-protein interfaces
-- **Mechanistic biology of newly liganded proteins** — we identify cysteine-reactive compounds for uncharacterized proteins; biology labs needed to determine what these proteins do when liganded/inhibited
-- **Computational druggability prediction** — computational approaches to predict which of our identified reactive cysteines correspond to functional hotspots; knowledge graph integration of variant, expression, and interaction data
-- **In vivo target engagement in disease models** — labs with disease-relevant animal models to test selectivity and efficacy of our covalent probes in physiologically relevant contexts
+- Fatty acid amide hydrolase (FAAH)
+- Monoacylglycerol lipase (MAGL/MGLL)
+- ABHD6 and ABHD12
+- Diacylglycerol lipase (DAGL-α, DAGL-β)
+- Serine hydrolase superfamily
+- GSTP1 (glutathione S-transferase Pi 1)
+- PRMT5 (protein arginine methyltransferase 5)
+- RNF114 (E3 ubiquitin ligase)
+- NR0B1/DAX1
+- Reactive cysteine residues at protein-protein interaction interfaces
+- PAFAH1B2 and PAFAH1B3
+- Endocannabinoid metabolic enzymes
+- DC-STAMP and other immune-relevant targets
 
-## Available Resources / Unique Capabilities
+## Keywords
 
-- **Covalent fragment library** — ~2,000 electrophilic compounds covering diverse warheads; available for collaborative screening against specific proteins of interest
-- **isoTOP-ABPP platform** — quantitative cysteine and serine reactivity profiling service/collaboration
-- **Druggable proteome dataset** — published proteome-wide cysteine reactivity dataset (~8,000 sites) as a reference for target prioritization
-- **Serine hydrolase probe panel** — validated activity-based probes for >50 serine hydrolases
+Chemoproteomics, Covalent inhibitors, Ligandability mapping, Electrophilic fragments, Functional proteomics, Serine hydrolase biology, Endocannabinoid system, Chemical biology, Druggable proteome, Probe development, Reactive residue profiling, Lipid signaling, Targeted protein degradation, Phenotypic chemoproteomic screening
