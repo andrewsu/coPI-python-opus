@@ -77,6 +77,9 @@ class SimulationEngine:
         self._toplevel_posts: dict[tuple[str, str], int] = {}
         self.max_toplevel_per_channel = 1  # max new threads per agent per channel per simulation day
 
+        # Track which channels each agent joined: agent_id -> set of channel names
+        self._agent_channels: dict[str, set[str]] = {}
+
     @property
     def is_within_time_limit(self) -> bool:
         if not self._start_time:
@@ -391,6 +394,9 @@ class SimulationEngine:
             # Skip if this agent sent the message
             if agent.bot_name.lower() in sender_name.lower():
                 continue
+            # Skip if agent isn't in this channel
+            if channel_name not in self._agent_channels.get(agent.agent_id, set()):
+                continue
             if not self._agent_within_budget(agent):
                 continue
             # Thread discipline: don't even let agents decide if the thread is too young
@@ -655,6 +661,7 @@ class SimulationEngine:
             if not agent:
                 continue
             channels_to_join = self._pick_channels_for_agent(agent)
+            self._agent_channels[agent_id] = set(channels_to_join)
             for ch_name in channels_to_join:
                 ch_id = existing.get(ch_name)
                 if ch_id:
