@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     slack_app_token_saez: str = ""
     slack_bot_token_wu: str = ""
     slack_app_token_wu: str = ""
+    slack_bot_token_grantbot: str = ""
+    slack_app_token_grantbot: str = ""
 
     # LLM models
     llm_profile_model: str = "claude-opus-4-6"

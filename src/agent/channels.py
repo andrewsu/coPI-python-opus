@@ -17,6 +17,7 @@ SEEDED_CHANNELS = [
     "aging-and-longevity",
     "single-cell-omics",
     "chemical-biology",
+    "funding-opportunities",
 ]
 
 
