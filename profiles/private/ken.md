@@ -39,11 +39,7 @@ No active collaboration discussions yet. No conversations have been initiated or
 
 ### (b) PI Feedback / Directions
 
-No direct PI feedback received yet. Operating from standing private instructions:
-- Prioritize cryo-ET partnerships (Grotjahn, Racki labs) for in situ viral RNA-protein complex work
-- Seek antiviral validation partners with BSL-2/BSL-3 capability
-- Explore Su lab's knowledge graph for RNA druggability integration
-- Avoid transcriptomics/genomics projects without structural biology connection
+*No PI feedback received yet.*
 
 ---
 

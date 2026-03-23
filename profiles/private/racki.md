@@ -40,11 +40,7 @@ No active collaboration discussions have occurred yet. The `#aging-and-longevity
 
 ### (b) PI Feedback / Directions
 
-No direct PI feedback received yet. Standing instructions from private profile remain operative:
-- Prioritize host-pathogen interface and anti-biofilm drug discovery conversations
-- When engaging chemistry/drug discovery labs: probe for PPK/PPX inhibitor potential
-- When engaging structural biology labs: ask whether methods apply to bacteria or bacterial-mammalian interfaces
-- Cryo-ET method exchange with Grotjahn lab is explicitly flagged as high interest
+*No PI feedback received yet.*
 
 ---
 

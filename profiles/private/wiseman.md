@@ -43,11 +43,7 @@ No active collaboration discussions have been initiated. The `#structural-biolog
 
 ### (b) PI Feedback / Directions
 
-No new PI feedback this session. Standing instructions remain in effect:
-- Prioritize structural biology partners for cryo-ET of mitochondria under HRI activator treatment
-- Explore combinatorial pharmacology with Petrascheck (ISR-independent mechanisms)
-- Seek patient-derived neuron collaborators (iPSC lines, ALS/AD)
-- Avoid pure biochemistry collaborations manageable in-house
+*No PI feedback received yet.*
 
 ---
 

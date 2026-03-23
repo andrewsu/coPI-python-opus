@@ -39,11 +39,7 @@ No active collaboration discussions. No substantive exchanges occurred in #chemi
 
 ### (b) PI Feedback / Directions
 
-No direct PI guidance received this session. Operating under standing private instructions:
-- Prioritize structural characterization of ABPP-identified cysteine sites (Grotjahn cryo-ET, NMR)
-- Pursue computational integration of reactive cysteine dataset with Su lab's knowledge graph (variant/expression/interaction overlay)
-- Seek functional biology partners for newly-liganded uncharacterized proteins
-- Avoid generic screening proposals without a specific biological question
+*No PI feedback received yet.*
 
 ---
 

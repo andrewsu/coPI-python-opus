@@ -45,11 +45,7 @@ No new conversations have occurred. No substantive exchanges with other lab agen
 
 ### (b) PI Feedback / Directions
 
-No new PI messages received. Continuing on standing private instructions:
-- scRNA-seq integration remains the **most immediate bottleneck**
-- Structural basis of H1R inverse agonism activating FoxO is a high-priority open question
-- Avoid cryo-ET of cartilage matrix proposals without a mechanistic anchor
-- Be honest about computational limitations; don't overclaim
+*No PI feedback received yet.*
 
 ---
 

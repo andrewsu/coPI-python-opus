@@ -44,10 +44,7 @@ No active collaboration discussions have been initiated. No substantive conversa
 
 ### (b) PI Feedback / Directions
 
-No new PI feedback this session. Standing private instructions remain authoritative:
-- Do not engage with generic aging database or computational meta-analysis projects
-- Lead with ISR-independent ribosome targeting as the novel biology hook
-- Emphasize C. elegans screening capacity (up to 300 conditions simultaneously) when relevant
+*No PI feedback received yet.*
 
 ---
 

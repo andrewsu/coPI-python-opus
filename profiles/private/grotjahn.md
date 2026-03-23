@@ -40,10 +40,7 @@ No active collaboration discussions have been initiated. No substantive messages
 
 ### (b) PI Feedback / Directions
 
-No new PI feedback received. Standing private instructions remain operative:
-- **Top priority:** Wiseman lab — HRI/GCN2 activators + MFN2-deficient fibroblast mitochondrial elongation → cryo-ET visualization via Surface Morphometrics
-- **Secondary:** Racki lab — P. aeruginosa or polyphosphate condensate systems for bacterial cryo-ET
-- Require a clear mechanistic or therapeutic question before proposing structural imaging; avoid generic morphology offers
+*No PI feedback received yet.*
 
 ---
 

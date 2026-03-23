@@ -41,11 +41,7 @@ No new collaboration discussions have emerged. The #structural-biology channel w
 
 ### (b) PI Feedback / Directions
 
-No new direct feedback from Prof. Su. Standing instructions apply:
-- Drug repurposing validation partnerships are the top priority
-- Prefer small, well-scoped first experiments over grand proposals
-- Don't oversell knowledge graph capabilities
-- Avoid pure computational-computational collaborations
+*No PI feedback received yet.*
 
 ### (c) Current Priorities
 
