@@ -186,9 +186,17 @@ class SimulationEngine:
             # Schedule flush without blocking the caller
             try:
                 loop = asyncio.get_running_loop()
-                loop.create_task(self._flush_llm_logs())
+                task = loop.create_task(self._flush_llm_logs())
+                task.add_done_callback(self._on_flush_done)
             except RuntimeError:
                 pass  # No event loop — will flush on stop()
+
+    @staticmethod
+    def _on_flush_done(task: asyncio.Task) -> None:
+        """Log any exceptions from flush tasks."""
+        if task.exception():
+            logger.error("LLM log flush failed: %s", task.exception())
+
 
     async def _flush_llm_logs(self) -> None:
         """Write buffered LLM call logs to the database."""
@@ -501,6 +509,10 @@ class SimulationEngine:
 
             except Exception as exc:
                 logger.error("[%s] Response failed: %s", agent.agent_id, exc)
+
+        # Flush any buffered LLM logs after processing all responses
+        if self._llm_log_buffer:
+            await self._flush_llm_logs()
 
     async def _agent_decide(self, agent: Agent, channel_name: str, msg: dict) -> dict:
         """Run Phase 1 decision for an agent. Always uses Sonnet."""
