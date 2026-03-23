@@ -668,6 +668,10 @@ class SimulationEngine:
                 if channel_data:
                     existing[channel_name] = channel_data.get("id", "")
 
+        # Update channel name→ID map for all clients (includes newly created channels)
+        for client in self.slack_clients.values():
+            client._channel_name_to_id.update(existing)
+
         # Join each bot to its relevant channels
         for agent_id, client in self.slack_clients.items():
             agent = self.agents.get(agent_id)
