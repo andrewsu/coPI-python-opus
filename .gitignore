@@ -29,6 +29,9 @@ env/
 logs/*.json
 logs/*.log
 
+# Bot working memory (ephemeral, not committed)
+profiles/memory/*.md
+
 # IDE
 .idea/
 .vscode/
