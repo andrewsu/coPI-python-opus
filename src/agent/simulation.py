@@ -93,6 +93,9 @@ class SimulationEngine:
             self.budget_cap,
         )
 
+        # Ensure all seeded channels exist
+        self._ensure_seeded_channels()
+
         # Build lab directory (other labs' recent publications) for each agent
         self._build_lab_directories()
 
@@ -472,8 +475,11 @@ class SimulationEngine:
                             [agent.agent_id, sender_agent],
                             topic=decision.get("reason", "collab")[:20],
                         )
+                        reply_thread_ts = msg.get("thread_ts") or msg.get("ts")
                         await self._create_and_notify_channel(
-                            agent.agent_id, new_channel_name
+                            agent.agent_id, new_channel_name,
+                            source_channel=channel_name,
+                            source_thread_ts=reply_thread_ts,
                         )
 
             except Exception as exc:
@@ -565,10 +571,84 @@ class SimulationEngine:
         except Exception as exc:
             logger.warning("Failed to log message: %s", exc)
 
+    # Channels every bot joins regardless of profile
+    _UNIVERSAL_CHANNELS = {"general", "funding-opportunities"}
+
+    # Keywords that indicate relevance to each topic channel
+    _CHANNEL_KEYWORDS: dict[str, list[str]] = {
+        "drug-repurposing": [
+            "drug", "repurpos", "pharmacolog", "therapeutic", "compound",
+            "small molecule", "target", "ligand", "polypharmacol",
+        ],
+        "structural-biology": [
+            "structur", "cryo", "crystallograph", "x-ray", "microscop",
+            "tomograph", "molecular visualization", "conformation",
+        ],
+        "aging-and-longevity": [
+            "aging", "longevity", "lifespan", "neurodegenerat", "age-related",
+            "senescen", "alzheimer", "parkinson",
+        ],
+        "single-cell-omics": [
+            "single-cell", "single cell", "scrna", "transcriptom", "genomic",
+            "multiom", "sequencing", "omics",
+        ],
+        "chemical-biology": [
+            "chemical biolog", "proteomics", "chemoproteom", "covalent",
+            "activity-based", "abpp", "chemical probe", "mass spectrom",
+        ],
+    }
+
+    def _pick_channels_for_agent(self, agent: Agent) -> list[str]:
+        """Decide which seeded channels an agent should join based on its profile."""
+        profile_text = agent.public_profile.lower()
+        channels = list(self._UNIVERSAL_CHANNELS)
+        for channel_name, keywords in self._CHANNEL_KEYWORDS.items():
+            if any(kw in profile_text for kw in keywords):
+                channels.append(channel_name)
+        return channels
+
+    def _ensure_seeded_channels(self) -> None:
+        """Create any missing seeded channels and join relevant bots."""
+        # Use the first available client to create channels
+        creator = next(iter(self.slack_clients.values()), None)
+        if not creator or not creator._app:
+            return
+
+        try:
+            result = creator._app.client.conversations_list(types="public_channel", limit=200)
+            existing = {ch["name"]: ch["id"] for ch in result.get("channels", [])}
+        except Exception as exc:
+            logger.warning("Failed to list channels: %s", exc)
+            return
+
+        # Ensure all seeded channels exist
+        for channel_name in SEEDED_CHANNELS:
+            if channel_name not in existing:
+                logger.info("Creating seeded channel #%s", channel_name)
+                channel_data = creator.create_channel(channel_name)
+                if channel_data:
+                    existing[channel_name] = channel_data.get("id", "")
+
+        # Join each bot to its relevant channels
+        for agent_id, client in self.slack_clients.items():
+            agent = self.agents.get(agent_id)
+            if not agent:
+                continue
+            channels_to_join = self._pick_channels_for_agent(agent)
+            for ch_name in channels_to_join:
+                ch_id = existing.get(ch_name)
+                if ch_id:
+                    client.join_channel(ch_id)
+            logger.info("[%s] Joined channels: %s", agent_id, ", ".join(sorted(channels_to_join)))
+
     async def _create_and_notify_channel(
-        self, creator_agent_id: str, channel_name: str
+        self,
+        creator_agent_id: str,
+        channel_name: str,
+        source_channel: str | None = None,
+        source_thread_ts: str | None = None,
     ) -> None:
-        """Create a collaboration channel and notify relevant parties."""
+        """Create a collaboration channel and post a notice in the source thread."""
         client = self.slack_clients.get(creator_agent_id)
         if client:
             channel_data = client.create_channel(channel_name)
@@ -580,6 +660,13 @@ class SimulationEngine:
                 logger.info(
                     "[%s] Created collaboration channel #%s", creator_agent_id, channel_name
                 )
+                # Post a notice in the original thread
+                if source_channel:
+                    notice = f"Let's continue this discussion in #{channel_name}"
+                    await self._post_message(
+                        creator_agent_id, source_channel, notice,
+                        thread_ts=source_thread_ts,
+                    )
 
     def _infer_sender_agent(self, sender_name: str) -> str | None:
         """Try to infer which agent sent a message from their bot name."""

@@ -7,6 +7,3 @@
 
 ### Communication Style
 - Use default professional academic tone.
-
-## Working Memory
-*Updated by agent after each simulation run.*

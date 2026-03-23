@@ -69,29 +69,6 @@ The Su Lab at The Scripps Research Institute develops computational infrastructu
 
 knowledge graphs, FAIR data principles, drug repurposing, biomedical APIs, federated data integration, retrieval-augmented generation, large language models, open science, community curation, citizen science, genomic surveillance, metadata harmonization, Schema.org, translational science, Biomedical Data Translator Consortium, Consortium for Viral Systems Biology
 
-## Recent Publications
-
-- A case-based explainable graph neural network framework for mechanistic drug repositioning. *Bioinformatics (Oxford, England)*. (2026). https://doi.org/10.1093/bioinformatics/btag008
-- Federated knowledge retrieval elevates large language model performance on biomedical benchmarks. *GigaScience*. (2026). https://doi.org/10.1093/gigascience/giag007
-- The NIAID Discovery Portal: a unified search engine for infectious and immune-mediated disease datasets. *mSystems*. (2026). https://doi.org/10.1128/msystems.01270-25
-- Announcing the Biomedical Data Translator: Initial Public Release. *Clinical and translational science*. (2025). https://doi.org/10.1111/cts.70284
-- Lessons Learned from a Bioinformatics Class: What Is . *Journal of proteome research*. (2025). https://doi.org/10.1021/acs.jproteome.5c00436
-- Federated Knowledge Retrieval Elevates Large Language Model Performance on Biomedical Benchmarks. *bioRxiv : the preprint server for biology*. (2025). https://doi.org/10.1101/2025.08.01.668022
-- Perspectives on tracking data reuse across biodata resources. *Bioinformatics advances*. (2024). https://doi.org/10.1093/bioadv/vbae057
-- Drug Repurposing using consilience of Knowledge Graph Completion methods. *bioRxiv : the preprint server for biology*. (2024). https://doi.org/10.1101/2023.05.12.540594
-- Repositioning the Early Pathology of Type 1 Diabetes to the Extraislet Vasculature. *Journal of immunology (Baltimore, Md. : 1950)*. (2024). https://doi.org/10.4049/jimmunol.2300769
-- An approach for collaborative development of a federated biomedical knowledge graph-based question-answering system: Question-of-the-Month challenges. *Journal of clinical and translational science*. (2023). https://doi.org/10.1017/cts.2023.619
-- Addressing barriers in FAIR data practices for biomedical data. *Scientific data*. (2023). https://doi.org/10.1038/s41597-023-01969-8
-- Outbreak.info genomic reports: scalable and dynamic surveillance of SARS-CoV-2 variants and mutations. *Nature methods*. (2023). https://doi.org/10.1038/s41592-023-01769-3
-- BioThings Explorer: a query engine for a federated knowledge graph of biomedical APIs. *Bioinformatics (Oxford, England)*. (2023). https://doi.org/10.1093/bioinformatics/btad570
-- Author Correction: A protocol for adding knowledge to Wikidata: aligning resources on human coronaviruses. *BMC biology*. (2023). https://doi.org/10.1186/s12915-023-01764-2
-- DrugMechDB: A Curated Database of Drug Mechanisms. *Scientific data*. (2023). https://doi.org/10.1038/s41597-023-02534-z
-- DrugMechDB: A Curated Database of Drug Mechanisms. *bioRxiv : the preprint server for biology*. (2023). https://doi.org/10.1101/2023.05.01.538993
-- Schema Playground: a tool for authoring, extending, and using metadata schemas to improve FAIRness of biomedical data. *BMC bioinformatics*. (2023). https://doi.org/10.1186/s12859-023-05258-4
-- Association study between drug prescriptions and Alzheimer's disease claims in a commercial insurance database. *Alzheimer's research & therapy*. (2023). https://doi.org/10.1186/s13195-023-01255-0
-- Developing a standardized but extendable framework to increase the findability of infectious disease datasets. *Scientific data*. (2023). https://doi.org/10.1038/s41597-023-01968-9
-- Outbreak.info Research Library: a standardized, searchable platform to discover and explore COVID-19 resources. *Nature methods*. (2023). https://doi.org/10.1038/s41592-023-01770-w
-
 ## Active Grants
 
 - Bioinformatics Statistical Informatics Track

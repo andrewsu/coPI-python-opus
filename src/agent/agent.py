@@ -25,6 +25,7 @@ class Agent:
         self.pi_name = pi_name  # e.g., "Andrew Su"
         self._public_profile: str | None = None
         self._private_profile: str | None = None
+        self._working_memory: str | None = None
         self._base_system_prompt: str | None = None
         self._decision_prompt: str | None = None
         self._lab_directory: str | None = None  # Shared across agents
@@ -50,6 +51,15 @@ class Agent:
         return self._private_profile
 
     @property
+    def working_memory(self) -> str:
+        if self._working_memory is None:
+            self._working_memory = self._load_file(
+                PROFILES_DIR / "memory" / f"{self.agent_id}.md",
+                "",
+            )
+        return self._working_memory
+
+    @property
     def base_system_prompt(self) -> str:
         if self._base_system_prompt is None:
             self._base_system_prompt = self._load_file(
@@ -71,6 +81,7 @@ class Agent:
         """Reload profiles from disk (call after working memory updates)."""
         self._public_profile = None
         self._private_profile = None
+        self._working_memory = None
 
     def build_system_prompt(self, channel_name: str, channel_description: str = "") -> str:
         """Build the full system prompt for an agent in a given channel."""
@@ -92,6 +103,9 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
 
 ## Your Private Instructions
 {self.private_profile}
+
+## Your Working Memory
+{self.working_memory if self.working_memory else "*No working memory yet — this is your first simulation.*"}
 {lab_directory_section}
 ## Current Context
 Channel: #{channel_name}
@@ -265,22 +279,12 @@ Keep it concise — this is a living summary, not a log. Under 300 words.""",
         return response
 
     def _update_working_memory_file(self, new_memory: str) -> None:
-        """Update the working memory section in the private profile file."""
-        private_path = PROFILES_DIR / "private" / f"{self.agent_id}.md"
-        current = self._load_file(private_path, "")
-
-        marker = "## Working Memory"
-        if marker in current:
-            # Replace everything from marker onwards
-            idx = current.index(marker)
-            new_content = current[:idx] + f"{marker}\n\n{new_memory}\n"
-        else:
-            new_content = current + f"\n\n{marker}\n\n{new_memory}\n"
-
+        """Write working memory to profiles/memory/{agent_id}.md."""
+        memory_path = PROFILES_DIR / "memory" / f"{self.agent_id}.md"
         try:
-            private_path.parent.mkdir(parents=True, exist_ok=True)
-            private_path.write_text(new_content, encoding="utf-8")
-            self._private_profile = None  # Invalidate cache
+            memory_path.parent.mkdir(parents=True, exist_ok=True)
+            memory_path.write_text(new_memory + "\n", encoding="utf-8")
+            self._working_memory = None  # Invalidate cache
         except Exception as exc:
             logger.error("[%s] Failed to update working memory: %s", self.agent_id, exc)
 
