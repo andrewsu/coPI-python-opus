@@ -203,6 +203,7 @@ class SimulationEngine:
                         simulation_run_id=self.simulation_run_id,
                         agent_id=entry.get("agent_id", "unknown"),
                         phase=entry.get("phase", "unknown"),
+                        channel=entry.get("channel"),
                         model=entry.get("model", ""),
                         system_prompt=entry.get("system_prompt", ""),
                         messages_json=entry.get("messages", []),

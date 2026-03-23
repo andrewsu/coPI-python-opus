@@ -120,6 +120,7 @@ class LlmCallLog(Base):
     )
     agent_id: Mapped[str] = mapped_column(String(50), nullable=False)
     phase: Mapped[str] = mapped_column(String(30), nullable=False)  # decide, respond, kickstart, memory
+    channel: Mapped[str | None] = mapped_column(String(100), nullable=True)
     model: Mapped[str] = mapped_column(String(100), nullable=False)
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     messages_json: Mapped[dict] = mapped_column(JSON, nullable=False)

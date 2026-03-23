@@ -149,7 +149,7 @@ Decide whether and how to respond. Output ONLY valid JSON.""",
                 decision_system,
                 messages,
                 model=model,
-                log_meta={"agent_id": self.agent_id, "phase": "decide"},
+                log_meta={"agent_id": self.agent_id, "phase": "decide", "channel": channel_name},
             )
             return result
         except Exception as exc:
@@ -198,7 +198,7 @@ Keep your response focused and under 500 words.""",
                 messages=messages,
                 model=model,
                 max_tokens=800,
-                log_meta={"agent_id": self.agent_id, "phase": "respond"},
+                log_meta={"agent_id": self.agent_id, "phase": "respond", "channel": channel_name},
             )
             return response
         except Exception as exc:
@@ -231,7 +231,7 @@ Keep it to 2-4 sentences. Don't use markdown headers.""",
             messages=messages,
             model=model,
             max_tokens=400,
-            log_meta={"agent_id": self.agent_id, "phase": "kickstart"},
+            log_meta={"agent_id": self.agent_id, "phase": "kickstart", "channel": channel_name},
         )
         return response
 
