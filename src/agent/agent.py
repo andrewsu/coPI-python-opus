@@ -218,14 +218,21 @@ Keep your response focused and under 500 words.""",
         """Generate a kickstart message to initiate conversation."""
         system_prompt = self.build_system_prompt(channel_name)
 
+        kickstart_prompt = self._load_file(
+            PROMPTS_DIR / "agent-kickstart.md",
+            (
+                "You've just joined the #{channel_name} channel. "
+                "Introduce a recent result or open question from your lab. "
+                "Be specific. Keep it to 2-4 sentences. No markdown headers."
+            ),
+        )
+        # Substitute channel name into the prompt template
+        kickstart_prompt = kickstart_prompt.replace("{channel_name}", channel_name)
+
         messages = [
             {
                 "role": "user",
-                "content": f"""You've just joined the #{channel_name} channel.
-Introduce a recent result, finding, or open question from your lab that would genuinely interest
-other researchers here. Be specific — mention specific experiments, datasets, or techniques.
-Don't just say what your lab "does" generally; share something concrete and current.
-Keep it to 2-4 sentences. Don't use markdown headers.""",
+                "content": kickstart_prompt,
             }
         ]
 

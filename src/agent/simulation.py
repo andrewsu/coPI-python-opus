@@ -247,68 +247,36 @@ class SimulationEngine:
         return settings.llm_agent_model_sonnet
 
     async def _run_kickstart(self) -> None:
-        """Post scripted and generated kickstart messages to initiate conversation."""
-        kickstart_config = self._load_kickstart_config()
+        """Have each agent generate and post an opening message to a relevant channel."""
+        agents = list(self.agents.values())
+        random.shuffle(agents)
 
-        # Handle nested YAML structure (kickstart: { scripted: [...] })
-        if "kickstart" in kickstart_config and "scripted" not in kickstart_config:
-            kickstart_config = kickstart_config["kickstart"]
+        topic_channels = [
+            "general", "drug-repurposing", "structural-biology",
+            "aging-and-longevity", "chemical-biology", "single-cell-omics",
+        ]
 
-        # Shuffle scripted openers so the same bot doesn't always go first
-        scripted = list(kickstart_config.get("scripted", []))
-        random.shuffle(scripted)
-
-        for opener in scripted:
-            agent_id = opener.get("agent")
-            channel = opener.get("channel", "general").lstrip("#")
-            message = opener.get("message", "")
-
-            if not message or agent_id not in self.agents:
-                continue
-
-            await asyncio.sleep(random.uniform(5, 30))
-            await self._post_message(agent_id, channel, message)
-
-        # Generated openers for remaining agents (randomized)
-        scripted_agents = {o.get("agent") for o in scripted}
-        remaining_agents = [a for a in self.agents.values() if a.agent_id not in scripted_agents]
-        random.shuffle(remaining_agents)
-
-        for agent in remaining_agents:
+        posted = 0
+        for agent in agents:
             if not self.is_within_time_limit:
                 break
-            await asyncio.sleep(random.uniform(10, 60))
+            await asyncio.sleep(random.uniform(5, 45))
             try:
-                # Pick a channel this agent hasn't posted a top-level message to yet
-                candidates = [ch for ch in ["general", "drug-repurposing", "structural-biology",
-                                            "aging-and-longevity", "chemical-biology"]
-                              if self._can_post_toplevel(agent.agent_id, ch)]
+                # Pick a channel this agent is in and hasn't posted a top-level message to yet
+                agent_channels = self._agent_channels.get(agent.agent_id, set())
+                candidates = [ch for ch in topic_channels
+                              if ch in agent_channels
+                              and self._can_post_toplevel(agent.agent_id, ch)]
                 if not candidates:
-                    logger.debug("[%s] No channels available for kickstart (all at limit)", agent.agent_id)
+                    logger.debug("[%s] No channels available for kickstart", agent.agent_id)
                     continue
                 channel = random.choice(candidates)
                 message = await agent.generate_kickstart_message(channel)
                 await self._post_message(agent.agent_id, channel, message)
+                posted += 1
             except Exception as exc:
                 logger.error("[%s] Kickstart failed: %s", agent.agent_id, exc)
-        logger.info("Kickstart phase complete. %d scripted, %d generated openers posted.",
-                     len(scripted), len(remaining_agents))
-
-    def _load_kickstart_config(self) -> dict:
-        """Load kickstart configuration from prompts/agent-kickstart.md."""
-        import yaml
-        from pathlib import Path
-        try:
-            text = (Path("prompts") / "agent-kickstart.md").read_text()
-            # Extract YAML block
-            if "```yaml" in text:
-                start = text.find("```yaml") + 7
-                end = text.find("```", start)
-                yaml_text = text[start:end].strip()
-                return yaml.safe_load(yaml_text) or {}
-        except Exception:
-            pass
-        return {"scripted": _default_kickstart_messages()}
+        logger.info("Kickstart phase complete. %d openers posted.", posted)
 
     async def _process_messages(self) -> None:
         """Process incoming messages from the queue."""
@@ -819,41 +787,3 @@ class SimulationEngine:
                     await agent.update_working_memory(recent)
             except Exception as exc:
                 logger.error("[%s] Working memory update failed: %s", agent.agent_id, exc)
-
-
-def _default_kickstart_messages() -> list[dict]:
-    """Default scripted kickstart messages."""
-    return [
-        {
-            "agent": "su",
-            "channel": "general",
-            "message": (
-                "Hi everyone — the Su lab just published a new paper on using BioThings Explorer "
-                "for systematic drug repurposing in rare diseases. We identified several promising "
-                "candidates for Niemann-Pick disease type C using our knowledge graph approach. "
-                "Would love to discuss with anyone working on rare disease models or compound screening."
-            ),
-        },
-        {
-            "agent": "cravatt",
-            "channel": "chemical-biology",
-            "message": (
-                "We've been mapping the covalent ligandable proteome and have new data on "
-                "compound-protein interactions at protein-protein interfaces. Our ABPP platform "
-                "has identified hundreds of new cysteine-reactive sites that appear druggable. "
-                "Curious if anyone here is working on structural characterization of these binding "
-                "sites or has computational approaches for predicting druggability at PPI interfaces."
-            ),
-        },
-        {
-            "agent": "lotz",
-            "channel": "single-cell-omics",
-            "message": (
-                "Our lab has generated several large single-cell RNA-seq datasets from "
-                "osteoarthritic and healthy cartilage tissue, as well as intervertebral disc "
-                "samples across multiple time points. We're looking for computational collaborators "
-                "to help with integration and meta-analysis across datasets — particularly anyone "
-                "with experience aligning datasets from different donors and conditions."
-            ),
-        },
-    ]
