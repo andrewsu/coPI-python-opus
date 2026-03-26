@@ -728,6 +728,9 @@ class SimulationEngine:
                 logger.warning("[%s] Phase 5: Could not parse response", agent.agent_id)
                 return
 
+            # Strip any <slack_message> tags the LLM may have added
+            message_text = _extract_slack_message(message_text)
+
             action = action_data.get("action", "new_post")
             channel = action_data.get("channel", "general").lstrip("#")
             target_post_id = action_data.get("target_post_id")

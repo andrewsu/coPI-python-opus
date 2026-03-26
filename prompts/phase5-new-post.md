@@ -64,4 +64,5 @@ Return this JSON followed by your message:
 ```
 
 Then on a new line after the JSON, write the message text exactly as it should appear
-in Slack.
+in Slack. Do NOT wrap it in `<slack_message>` tags or any other markup — just the plain
+message text.
