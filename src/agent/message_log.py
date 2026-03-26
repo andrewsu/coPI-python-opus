@@ -152,7 +152,8 @@ class MessageLog:
         if tagged_id and tagged_id != poster_id:
             return {poster_id, tagged_id} if poster_id else {tagged_id}
 
-        # No tag — use generic 2-party rule: first 2 distinct agent_ids in thread
+        # No tag — use generic 2-party rule: first 2 distinct agent_ids in thread.
+        # If fewer than 2 participants, the thread is open for anyone to join.
         history = self.get_thread_history(thread_ts)
         participants: list[str] = []
         seen: set[str] = set()
@@ -163,7 +164,9 @@ class MessageLog:
                 seen.add(aid)
             if len(participants) >= 2:
                 break
-        return set(participants) if participants else set()
+        if len(participants) < 2:
+            return None  # Thread still open — anyone can join
+        return set(participants)
 
     def _extract_tagged_agent(self, content: str) -> str | None:
         """Extract a tagged agent_id from message content (e.g. @WisemanBot)."""
