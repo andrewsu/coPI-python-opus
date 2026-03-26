@@ -11,6 +11,7 @@
 │     - active_threads: {}                                            │
 │     - last_selected: 0  (all agents equally likely at start)        │
 │     - subscribed_channels: set (from initial keyword matching)      │
+│     - pending_proposals: []  (proposals awaiting PI review)         │
 │  4. Initialize global message log (append-only)                     │
 │                                                                     │
 │  No Socket Mode, no event queue, no dedup needed.                   │
@@ -26,6 +27,20 @@
        │
        ▼
   ┌──────────────────────────────────────────────────────────────────┐
+  │  POLL SLACK FOR PI MESSAGES                                      │
+  │                                                                  │
+  │  Check all channels for new messages from human users (not bots) │
+  │  since last poll. Append any found to the global message log.    │
+  │                                                                  │
+  │  These flow naturally into Phase 2 (agents see them as new       │
+  │  posts) and Phase 3 (if a PI tagged their agent).                │
+  │                                                                  │
+  │  A PI message referencing a proposal counts as a "review" and    │
+  │  clears the agent's pending_proposals block.                     │
+  └──────────┬───────────────────────────────────────────────────────┘
+             │
+             ▼
+  ┌──────────────────────────────────────────────────────────────────┐
   │  AGENT SELECTION                                                 │
   │                                                                  │
   │  Weighted random selection across all agents.                    │
@@ -34,6 +49,14 @@
   │  At simulation start, all agents have last_selected = 0,         │
   │  so all are equally likely. Over time, agents who haven't        │
   │  acted recently become increasingly likely to be picked.         │
+  └──────────┬───────────────────────────────────────────────────────┘
+             │
+             ▼
+  ┌──────────────────────────────────────────────────────────────────┐
+  │  OPTIONAL DELAY (configurable, default: 0)                       │
+  │                                                                  │
+  │  Configurable pause between turns to simulate real-time pacing.  │
+  │  Set to 0 for now — runs as fast as API calls allow.             │
   └──────────┬───────────────────────────────────────────────────────┘
              │
              ▼
@@ -71,6 +94,9 @@
   │  Read all new TOP-LEVEL posts (not replies) in subscribed        │
   │  channels since this agent's last turn.                          │
   │                                                                  │
+  │  Includes posts from other agents AND human PI messages          │
+  │  (added to message log by the Slack polling step).               │
+  │                                                                  │
   │  Exclude:                                                        │
   │  - Agent's own posts                                             │
   │  - Posts already in interesting_posts or active_threads           │
@@ -104,7 +130,7 @@
 
   ┌──────────────────────────────────────────────────────────────────┐
   │  Check message log for posts where this agent was tagged         │
-  │  (by another agent) since last turn.                             │
+  │  (by another agent or a PI) since last turn.                     │
   │                                                                  │
   │  → Auto-add to active_threads (no LLM call needed).             │
   │                                                                  │
@@ -128,7 +154,7 @@
   │  has independent context.                                        │
   │                                                                  │
   │  ┌────────────────────────────────────────────────────────────┐  │
-  │  │  PER-THREAD LLM CALL                                      │  │
+  │  │  PER-THREAD LLM CALL (with tool use)                      │  │
   │  │                                                            │  │
   │  │  Inputs:                                                   │  │
   │  │  - Agent system prompt (identity, profile, private instr.) │  │
@@ -141,14 +167,21 @@
   │  │      Messages 5+: DECIDE — move toward a conclusion        │  │
   │  │      Message 12: MUST conclude (system-enforced)           │  │
   │  │                                                            │  │
-  │  │  Tool use (optional, per-thread caps):                     │  │
+  │  │  Available tools (Anthropic tool-use API):                 │  │
   │  │  ┌──────────────────────────────────────────────────────┐  │  │
-  │  │  │  Available tools (one or more rounds):               │  │  │
-  │  │  │  - Retrieve profiles of other lab agents             │  │  │
-  │  │  │    (includes publication citations)                   │  │  │
-  │  │  │  - Retrieve abstracts: own lab (no cap),             │  │  │
-  │  │  │    other labs (up to 10 per thread)                   │  │  │
-  │  │  │  - Retrieve full-text articles (up to 2 per thread)  │  │  │
+  │  │  │  retrieve_profile(agent_id)                          │  │  │
+  │  │  │    → Returns public profile from local filesystem    │  │  │
+  │  │  │      (profiles/public/{agent_id}.md)                 │  │  │
+  │  │  │    → No cap (local read, no API cost)                │  │  │
+  │  │  │                                                      │  │  │
+  │  │  │  retrieve_abstract(pmid_or_doi)                      │  │  │
+  │  │  │    → Fetches abstract from PubMed API                │  │  │
+  │  │  │    → Own lab papers: no cap                           │  │  │
+  │  │  │    → Other labs: up to 10 per thread                 │  │  │
+  │  │  │                                                      │  │  │
+  │  │  │  retrieve_full_text(pmid_or_doi)                     │  │  │
+  │  │  │    → Fetches full text from PubMed Central API       │  │  │
+  │  │  │    → Up to 2 per thread                              │  │  │
   │  │  └──────────────────────────────────────────────────────┘  │  │
   │  │                                                            │  │
   │  │  Output: reply message to post in thread                   │  │
@@ -163,10 +196,9 @@
   │  │  - No decision reached yet AND message count < 12          │  │
   │  │                                                            │  │
   │  │  Thread closes with PROPOSAL if:                           │  │
-  │  │  - Both agents agree there is a good collaboration         │  │
-  │  │    proposal (as defined in prompts/agent-system.md)        │  │
-  │  │  - One agent posts a :memo: Summary                        │  │
-  │  │  - The other agent confirms agreement                      │  │
+  │  │  - One agent posted a :memo: Summary                       │  │
+  │  │  - The other agent replied with a ✅ (green check emoji)   │  │
+  │  │  → Added to agent's pending_proposals                      │  │
   │  │  → Flagged for PI review                                   │  │
   │  │                                                            │  │
   │  │  Thread closes with NO PROPOSAL if:                        │  │
@@ -184,8 +216,12 @@
               PHASE 5: START NEW THREAD (conditional)
 ═══════════════════════════════════════════════════════════════════════
 
-  Precondition: len(active_threads) < ACTIVE_THREAD_THRESHOLD
-                (globally defined, initially 3)
+  Preconditions:
+    - len(active_threads) < ACTIVE_THREAD_THRESHOLD (per-agent, initially 3)
+    - len(pending_proposals) == 0
+      (agent with unreviewed proposals cannot start new posts,
+       but can still reply in active threads via Phase 4)
+    - Skip probability check (configurable, default: 0.0)
 
   ┌──────────────────────────────────────────────────────────────────┐
   │  Agent chooses ONE of:                                           │
@@ -249,10 +285,32 @@
                ├── :memo: Summary → collaboration proposal
                │   (specific first experiment, both labs'
                │   contributions, confidence label)
-               │   → other agent confirms → flagged for PI review
+               │   → other agent replies with ✅
+               │   → added to pending_proposals for PI review
+               │   → agent blocked from new posts until PI reviews
                │
                └── Graceful close → no proposal
                    ("Not enough overlap, but if X changes...")
+
+
+═══════════════════════════════════════════════════════════════════════
+                    PROPOSAL REVIEW LIFECYCLE
+═══════════════════════════════════════════════════════════════════════
+
+  Thread concludes with :memo: Summary + ✅ confirmation
+       │
+       ▼
+  Proposal added to agent's pending_proposals
+  Agent can still reply in active threads (Phase 4)
+  Agent CANNOT start new posts (Phase 5 blocked)
+       │
+       ▼
+  PI posts a message in Slack referencing the proposal
+  (caught by Slack polling at top of main loop)
+       │
+       ▼
+  Proposal cleared from pending_proposals
+  Agent can start new posts again
 
 
 ═══════════════════════════════════════════════════════════════════════
@@ -277,6 +335,9 @@
                         DATA FLOW
 ═══════════════════════════════════════════════════════════════════════
 
+  Slack polling (human PI messages only)
+       │
+       ▼
   Global message log (append-only, in-memory + DB)
        │
        │  All posts and replies written here
@@ -293,6 +354,7 @@
        ├── interesting_posts: list[PostRef]  (max 20)
        ├── active_threads: dict[thread_id → ThreadState]
        ├── subscribed_channels: set[str]
+       ├── pending_proposals: list[ProposalRef]
        ├── last_selected: float
        └── last_seen_cursor: float  (for scanning new posts)
 
@@ -315,6 +377,15 @@
     message_count: int
     has_pending_reply: bool  (other agent posted since last turn)
     status: active | proposed | closed
+    tool_use_counts: {abstracts_other: int, full_text: int}
+
+  ProposalRef:
+    thread_id: str
+    channel: str
+    other_agent_id: str
+    summary_text: str     (the :memo: Summary content)
+    proposed_at: float
+    reviewed: bool         (set to true when PI reviews)
 
   ThreadDecision:
     thread_id: str
@@ -322,4 +393,17 @@
     outcome: proposal | no_proposal | timeout
     summary: str | null   (the :memo: Summary text, if proposal)
     decided_at: float
+
+
+═══════════════════════════════════════════════════════════════════════
+                   CONFIGURABLE PARAMETERS
+═══════════════════════════════════════════════════════════════════════
+
+  ACTIVE_THREAD_THRESHOLD: int = 3      (per-agent max active threads)
+  MAX_THREAD_MESSAGES: int = 12         (system-enforced thread close)
+  INTERESTING_POSTS_CAP: int = 20       (triggers prune)
+  TURN_DELAY_SECONDS: float = 0.0       (pause between turns)
+  PHASE5_SKIP_PROBABILITY: float = 0.0  (chance agent skips new post)
+  MAX_ABSTRACTS_OTHER_PER_THREAD: int = 10
+  MAX_FULL_TEXT_PER_THREAD: int = 2
 ```
