@@ -517,7 +517,7 @@ class SimulationEngine:
                 tools=TOOL_DEFINITIONS,
                 tool_executor=tool_executor,
                 model=settings.llm_agent_model_opus,
-                max_tokens=800,
+                max_tokens=1200,
                 log_meta={
                     "agent_id": agent.agent_id,
                     "phase": "thread_reply",
@@ -928,6 +928,9 @@ class SimulationEngine:
         thread_ts: str | None = None,
     ) -> None:
         """Post a message to Slack and record it in the message log + DB."""
+        # Final safety: strip any leaked <slack_message> tags
+        text = re.sub(r"</?slack_message>", "", text).strip()
+
         client = self.slack_clients.get(agent_id)
         agent = self.agents.get(agent_id)
 
