@@ -214,10 +214,10 @@ class SimulationEngine:
         self._phase3_activate_threads(agent)
 
         # Phase 4: Reply to active threads (parallel)
-        await self._phase4_reply_threads(agent)
+        phase4_thread_ids = await self._phase4_reply_threads(agent)
 
         # Phase 5: Start new thread (conditional)
-        await self._phase5_new_post(agent)
+        await self._phase5_new_post(agent, phase4_thread_ids)
 
         # Update cursor
         agent.state.last_seen_cursor = time.time()
@@ -385,6 +385,11 @@ class SimulationEngine:
                 continue
             if len(agent.state.active_threads) >= settings.active_thread_threshold:
                 break
+            # Enforce 2-party thread: only activate if ≤2 unique participants
+            thread_history = self.message_log.get_thread_history(thread_id)
+            thread_participants = {e.sender_agent_id for e in thread_history if e.sender_agent_id}
+            if len(thread_participants) >= 2 and agent.agent_id not in thread_participants:
+                continue
             other_id = self._infer_agent_id(entry.sender_name) or entry.sender_agent_id
             if other_id and other_id != agent.agent_id:
                 agent.state.active_threads[thread_id] = ThreadState(
@@ -403,8 +408,11 @@ class SimulationEngine:
     # Phase 4: Reply to Active Threads (parallel)
     # ------------------------------------------------------------------
 
-    async def _phase4_reply_threads(self, agent: Agent) -> None:
-        """Reply to all active threads that have a pending reply from the other agent."""
+    async def _phase4_reply_threads(self, agent: Agent) -> set[str]:
+        """Reply to all active threads that have a pending reply from the other agent.
+
+        Returns the set of thread IDs that were replied to (so Phase 5 can skip them).
+        """
         settings = get_settings()
 
         # Identify threads needing a reply
@@ -421,7 +429,7 @@ class SimulationEngine:
 
         if not threads_to_reply:
             logger.debug("[%s] Phase 4: No threads needing reply", agent.agent_id)
-            return
+            return set()
 
         logger.info(
             "[%s] Phase 4: Replying to %d threads",
@@ -434,6 +442,8 @@ class SimulationEngine:
             for thread in threads_to_reply
         ]
         await asyncio.gather(*tasks, return_exceptions=True)
+
+        return {t.thread_id for t in threads_to_reply}
 
     async def _reply_to_thread(self, agent: Agent, thread: ThreadState) -> None:
         """Compose and post a reply to a single thread."""
@@ -482,6 +492,7 @@ class SimulationEngine:
                 messages=messages,
                 tools=TOOL_DEFINITIONS,
                 tool_executor=tool_executor,
+                model=settings.llm_agent_model_opus,
                 max_tokens=800,
                 log_meta={
                     "agent_id": agent.agent_id,
@@ -617,9 +628,10 @@ class SimulationEngine:
     # Phase 5: New Post (conditional)
     # ------------------------------------------------------------------
 
-    async def _phase5_new_post(self, agent: Agent) -> None:
+    async def _phase5_new_post(self, agent: Agent, phase4_thread_ids: set[str] | None = None) -> None:
         """Optionally start a new thread or reply to an interesting post."""
         settings = get_settings()
+        phase4_thread_ids = phase4_thread_ids or set()
 
         # Check preconditions
         if len(agent.state.active_threads) >= settings.active_thread_threshold:
@@ -634,14 +646,42 @@ class SimulationEngine:
             logger.debug("[%s] Phase 5: Skipped (random)", agent.agent_id)
             return
 
+        # Filter out interesting posts that are already active threads (replied in Phase 4)
+        # or that already have a thread with another agent (2-party limit)
+        available_posts = []
+        for post in agent.state.interesting_posts:
+            if post.post_id in phase4_thread_ids:
+                continue
+            if post.post_id in agent.state.active_threads:
+                continue
+            # Check 2-party rule: if another agent already replied to this post,
+            # only allow if we'd be the second participant
+            thread_history = self.message_log.get_thread_history(post.post_id)
+            thread_participants = {e.sender_agent_id for e in thread_history if e.sender_agent_id}
+            if len(thread_participants) >= 2 and agent.agent_id not in thread_participants:
+                logger.debug(
+                    "[%s] Phase 5: Skipping post %s — thread already has 2 participants",
+                    agent.agent_id, post.post_id,
+                )
+                continue
+            available_posts.append(post)
+
+        # Temporarily replace interesting_posts for prompt building
+        original_posts = agent.state.interesting_posts
+        agent.state.interesting_posts = available_posts
+
         # Build prompt
         system_prompt, messages = agent.build_phase5_prompt()
+
+        # Restore
+        agent.state.interesting_posts = original_posts
 
         agent.api_call_count += 1
         try:
             response = await generate_agent_response(
                 system_prompt=system_prompt,
                 messages=messages,
+                model=settings.llm_agent_model_opus,
                 max_tokens=600,
                 log_meta={"agent_id": agent.agent_id, "phase": "new_post"},
             )
@@ -653,10 +693,20 @@ class SimulationEngine:
                 return
 
             action = action_data.get("action", "new_post")
-            channel = action_data.get("channel", "general")
+            channel = action_data.get("channel", "general").lstrip("#")
             target_post_id = action_data.get("target_post_id")
 
             if action == "reply" and target_post_id:
+                # Enforce 2-party thread discipline
+                thread_history = self.message_log.get_thread_history(target_post_id)
+                thread_participants = {e.sender_agent_id for e in thread_history if e.sender_agent_id}
+                if len(thread_participants) >= 2 and agent.agent_id not in thread_participants:
+                    logger.info(
+                        "[%s] Phase 5: Blocked reply to %s — thread already has 2 participants",
+                        agent.agent_id, target_post_id,
+                    )
+                    return
+
                 # Reply to an interesting post → creates a new thread
                 await self._post_message(
                     agent.agent_id, channel, message_text,
@@ -878,6 +928,11 @@ class SimulationEngine:
                     existing[ch_name] = ch_data.get("id", "")
 
         self._channel_id_map = dict(existing)
+
+        # Join the first (polling) client to ALL seeded channels so it can poll them
+        for ch_name, ch_id in existing.items():
+            if ch_name in SEEDED_CHANNELS:
+                client.join_channel(ch_id)
 
         # Share channel map across all clients
         for c in self.slack_clients.values():
