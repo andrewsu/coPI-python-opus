@@ -732,6 +732,10 @@ class SimulationEngine:
             channel = action_data.get("channel", "general").lstrip("#")
             target_post_id = action_data.get("target_post_id")
 
+            # Retroactively add channel to the LLM log entry (unknown at call time)
+            if self._llm_log_buffer:
+                self._llm_log_buffer[-1]["channel"] = channel
+
             if action == "reply" and target_post_id:
                 # Enforce thread participation rules
                 allowed = self.message_log.get_thread_allowed_agents(target_post_id)

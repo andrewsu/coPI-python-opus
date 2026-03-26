@@ -18,6 +18,10 @@ All agent-to-agent communication happens in Slack channels in natural language. 
 | Michael Petrascheck | PetrascheckBot | Molecular Medicine | Aging, lifespan, C. elegans drug screening, serotonin signaling |
 | Megan Ken | KenBot | ISCB | RNA structural biology, antiviral drug discovery, NMR |
 | Lisa Racki | RackiBot | ISCB | Bacterial survival, polyphosphate biology, cryo-ET |
+| Enrique Saez | SaezBot | Molecular Medicine | Metabolic disease, lipid biology, drug repurposing |
+| Chunlei Wu | WuBot | ISCB | Biomedical data integration, BioThings API, knowledge graphs |
+| Andrew Ward | WardBot | ISCB | Structural biology, cryo-EM, antibody engineering, vaccine design |
+| Bryan Briney | BrineyBot | ISCB | Antibody repertoires, B-cell genomics, computational immunology |
 
 ## Agent Profiles
 
@@ -156,45 +160,73 @@ See the full good/bad example set in `labbot-spec.md` section 4.5 — these are 
 
 ### Architecture
 
-A single Python process (`src/agent/main.py`) that:
-1. Connects to Slack via Slack Bolt SDK (one connection per agent, Socket Mode)
-2. Manages 8 agent identities
-3. Listens for messages across all channels
-4. Routes messages to appropriate agents
-5. Generates responses via Anthropic Claude API
-6. Posts responses back to Slack
-7. Logs activity to the database (AgentMessage, AgentChannel, SimulationRun)
+A turn-based simulation engine (`src/agent/simulation.py`) that:
+1. Connects to Slack via `slack_sdk.WebClient` (one client per agent, Web API polling)
+2. Manages 12 agent identities
+3. Runs a main loop: poll Slack → select agent → run 5-phase turn
+4. Generates responses via Anthropic Claude API (sonnet for decisions, opus for replies)
+5. Posts responses to Slack via Web API
+6. Logs activity to the database (AgentMessage, LlmCallLog, ThreadDecision, SimulationRun)
 
-### Message Flow
+No Socket Mode, no event queue, no dedup. A global append-only message log
+is the single source of truth. See `docs/agent-flow.md` for the full flow diagram.
+
+### Turn-Based Flow
 
 ```
-Message posted in Slack channel
-  → Simulation engine receives event
-  → Determine which agents should process it (all in channel, excluding sender)
-  → For each agent:
-      Phase 1 (Decide): LLM call → {should_respond, action}
-        actions: respond | ignore | create_channel | dm_pi
-      Phase 2 (Respond, if action=respond): LLM call → natural language message
-  → Post responses to Slack with random stagger (5-30 seconds)
-  → Log to AgentMessage table
+Main loop:
+  1. Poll Slack for human PI messages → append to message log
+  2. Select agent (weighted random: P ∝ time since last selected)
+  3. Run 5-phase turn:
+     Phase 1: Channel discovery (keyword matching, no LLM)
+     Phase 2: Scan & filter new posts (1 sonnet call)
+     Phase 3: Activate threads from tags/replies (no LLM)
+     Phase 4: Reply to active threads (opus, parallel, with tool use)
+     Phase 5: Start new thread or reply (opus, conditional)
+  4. Update agent.last_selected
 ```
 
-### Two-Phase LLM Calls
+### Thread Participation Rules
 
-**Phase 1 — Decide** (cheaper, shorter prompt):
-- Input: system prompt + last 20 channel messages + new message
-- Model: `claude-sonnet-4-6`
-- Output: `{"should_respond": bool, "reason": str, "action": "respond"|"ignore"|"create_channel"|"dm_pi"}`
+- If a post tags a specific agent (e.g., @WisemanBot), the thread is
+  reserved for the poster and the tagged agent only.
+- If no tag, the first two agents to post in a thread define its
+  participants. No third agent may join.
+- Other agents who want to discuss the topic must start a new top-level
+  post referencing the original.
+- These rules are enforced at Phase 3 (activation), Phase 4 (before reply),
+  and Phase 5 (before posting).
 
-**Phase 2 — Respond** (if action=respond):
-- Input: full system prompt + channel history + new message
-- Model: `claude-sonnet-4-6`
-- Output: natural language message to post
+### Model Selection
+
+- **Sonnet** (`claude-sonnet-4-6`): Phase 2 scan/filter decisions (cheaper, faster)
+- **Opus** (`claude-opus-4-6`): Phase 4 thread replies and Phase 5 new posts
+  (higher quality scientific discourse, better instruction following)
+
+### Tool Use (Phase 4)
+
+Thread replies use the Anthropic tool-use API with three tools:
+- `retrieve_profile(agent_id)` — read another agent's public profile (local file)
+- `retrieve_abstract(pmid_or_doi)` — fetch paper abstract from PubMed
+- `retrieve_full_text(pmid_or_doi)` — fetch full text from PMC (limited to 2/thread)
+
+The LLM can call tools in a loop (up to 5 rounds) before producing a final
+text response.
+
+### Output Format (Phase 4)
+
+The Phase 4 prompt requires the LLM to wrap its reply in `<slack_message>` tags.
+Only the content inside the tags is posted to Slack. This cleanly separates
+LLM reasoning (tool-use planning, internal notes) from the actual message.
+A heuristic preamble stripper serves as a fallback.
 
 ### System Prompt Structure
 
 ```
 [Base instructions: role, rules, communication norms, collaboration quality standards]
+
+## Your Identity
+Bot name, PI name, agent ID
 
 ## Your Lab Profile (Public)
 [Contents of profiles/public/{lab}.md]
@@ -202,52 +234,35 @@ Message posted in Slack channel
 ## Your Private Instructions
 [Contents of profiles/private/{lab}.md]
 
-## Current Context
-Channel: #{channel_name}
-Description: {channel_description}
+## Your Working Memory
+[Contents of profiles/memory/{lab}.md — updated after each simulation]
+
+## Other Labs' Recent Publications
+[Condensed directory of other labs' publications for cross-referencing]
 ```
 
 ### Simulation Controls
 
-- **Start:** `python -m src.agent.main --max-runtime 60 --budget 50`
-  - `--max-runtime N` — stop initiating new conversations after N minutes
+- **Start:** `docker compose --profile agent run --rm agent python -m src.agent.main --max-runtime 60 --budget 50`
+  - `--max-runtime N` — stop after N minutes
   - `--budget N` — max LLM API calls per agent per run (default: 50)
-- **Stop:** Ctrl+C or `SIGTERM` — agents finish in-progress responses, then stop
-- **Kickstart:** Seed messages posted by configured agents at simulation start to initiate conversations
-
-### Kickstart Messages
-
-Pre-written seed messages posted at simulation start (staggered over first 5 minutes). Mix of scripted openers (for known interesting cross-lab dynamics) and agent-generated openers (from profile + prompt: "Introduce a recent result or open question from your lab").
-
-See `prompts/agent-kickstart.md` for the full kickstart configuration.
-
-### Concurrency and Ordering
-
-- Messages processed in order per channel
-- Multiple channels can be processed concurrently
-- Multiple agents responding to the same message are staggered with random delays (5-30s)
-- An agent sees other agents' responses before formulating its own (sequential within a channel response round)
-
-### Response Decision Guidance (in system prompt)
-
-- Respond if the message is directly relevant to your lab's expertise
-- Respond if directly addressed or tagged
-- Respond if you see a genuine collaboration opportunity worth exploring
-- Don't respond just to be polite or to repeat what another agent said
-- Don't respond if you have nothing substantive to add
+  - `--mock` — run without real Slack tokens
+  - `--no-db` — skip database logging
+- **Stop:** Ctrl+C or `SIGTERM` — graceful shutdown
 
 ### Working Memory Update (post-run)
 
 After each simulation run:
-1. Agent reviews its recent interactions (from the run's AgentMessage records)
-2. LLM call: "Based on your recent conversations, update your working memory. Summarize: (a) collaboration opportunities identified and status, (b) feedback from PI, (c) current priorities. Keep this concise — this is your persistent memory, not a log."
-3. Updated working memory written back to `profiles/private/{lab}.md`
+1. Agent reviews its recent interactions (from the message log)
+2. LLM call: summarize collaboration opportunities, PI feedback, and priorities
+3. Updated working memory written to `profiles/memory/{lab}.md`
+4. Working memory is included in the agent's system prompt for subsequent runs
 
 ## Slack App Configuration
 
 ### One App Per Agent
 
-Each of the 8 agents has its own Slack app with distinct identity (name, avatar). Use app manifests for fast setup.
+Each of the 12 agents has its own Slack app with distinct identity (name, avatar). Use app manifests for fast setup. Only bot tokens (`xoxb-...`) are needed — no app-level tokens (Socket Mode is not used).
 
 **App manifest template** (substitute `BOT_NAME`):
 
@@ -282,40 +297,26 @@ Each of the 8 agents has its own Slack app with distinct identity (name, avatar)
     }
   },
   "settings": {
-    "event_subscriptions": {
-      "bot_events": [
-        "message.channels",
-        "message.groups",
-        "message.im"
-      ]
-    },
     "interactivity": {"is_enabled": false},
-    "socket_mode_enabled": true
+    "socket_mode_enabled": false
   }
 }
 ```
 
 **Setup per bot (~2 min each):**
 1. api.slack.com/apps → "Create New App" → "From an app manifest" → paste manifest → Create
-2. Basic Information → App-Level Tokens → generate token with `connections:write` scope → copy `xapp-...`
-3. Install App → Install to Workspace → copy `xoxb-...`
+2. Install App → Install to Workspace → copy `xoxb-...`
 
 ## LLM Prompt Files
 
 Stored in `prompts/` as markdown files:
 
-- `prompts/agent-system.md` — base system prompt template with collaboration quality standards and good/bad examples
-- `prompts/agent-respond-decision.md` — phase 1 decision prompt
-- `prompts/agent-kickstart.md` — kickstart message configuration (YAML in markdown)
+- `prompts/agent-system.md` — base system prompt with collaboration quality standards and good/bad examples
+- `prompts/phase2-scan-filter.md` — Phase 2 scan/filter prompt
+- `prompts/phase2-prune.md` — Phase 2 prune prompt
+- `prompts/phase4-thread-reply.md` — Phase 4 thread reply prompt (with `<slack_message>` tag format)
+- `prompts/phase5-new-post.md` — Phase 5 new post/reply prompt
 - `prompts/profile-synthesis.md` — profile ingestion LLM prompt (see profile-ingestion.md)
-
-## Cost Estimates
-
-**Per simulation run (1 hour, 8 agents):**
-- ~30 LLM calls per agent (15 decide + 15 respond) = 240 total calls
-- Average: ~4,000 input tokens, ~500 output tokens
-- Claude Sonnet pricing: ~$0.01/call
-- **Total: ~$2-3 per hour of simulation**
 
 ## Human Integration
 

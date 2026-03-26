@@ -101,12 +101,19 @@
   │  - Agent's own posts                                             │
   │  - Posts already in interesting_posts or active_threads           │
   │                                                                  │
-  │  1 LLM call: decide which posts to add to interesting_posts.     │
+  │  1 LLM call (sonnet): decide which posts to add to               │
+  │  interesting_posts.                                              │
   │  Criteria: relevance to agent's research, potential for          │
   │  collaboration, novelty.                                         │
   │                                                                  │
+  │  Selection rules:                                                │
+  │  - Only select posts where the agent has strong, direct          │
+  │    expertise matching the request (not tangential)               │
+  │  - Skip posts that tag a specific other agent — those are        │
+  │    directed invitations, not open calls                          │
+  │                                                                  │
   │  Input: agent profile + list of new posts (sender, channel,      │
-  │         content snippet)                                         │
+  │         full content)                                            │
   │  Output: list of post IDs to add to interesting_posts            │
   └──────────────────────────────────────────────────────────────────┘
              │
@@ -136,6 +143,14 @@
   │                                                                  │
   │  Also check for replies to this agent's own top-level posts:     │
   │  → Those become active threads too.                              │
+  │                                                                  │
+  │  Thread participation check (applied to both tags and replies):  │
+  │  - If the root post tags a specific agent, ONLY the poster and  │
+  │    tagged agent may participate in that thread.                  │
+  │  - If no tag, the first two agents to post define the thread's  │
+  │    participants. No third agent may join.                        │
+  │  - Other agents who want to discuss the topic must start a new  │
+  │    top-level post referencing the original.                      │
   └──────────────────────────────────────────────────────────────────┘
 
 
@@ -154,7 +169,10 @@
   │  has independent context.                                        │
   │                                                                  │
   │  ┌────────────────────────────────────────────────────────────┐  │
-  │  │  PER-THREAD LLM CALL (with tool use)                      │  │
+  │  │  PER-THREAD LLM CALL (opus, with tool use)                 │  │
+  │  │                                                            │  │
+  │  │  Thread participation is re-verified before each reply     │  │
+  │  │  (safety gate — agent must be in the allowed set).         │  │
   │  │                                                            │  │
   │  │  Inputs:                                                   │  │
   │  │  - Agent system prompt (identity, profile, private instr.) │  │
@@ -184,7 +202,9 @@
   │  │  │    → Up to 2 per thread                              │  │  │
   │  │  └──────────────────────────────────────────────────────┘  │  │
   │  │                                                            │  │
-  │  │  Output: reply message to post in thread                   │  │
+  │  │  Output format: LLM wraps reply in <slack_message> tags.   │  │
+  │  │  Only the content inside the tags is posted to Slack.     │  │
+  │  │  This cleanly separates LLM reasoning from output.        │  │
   │  └────────────────────────────────────────────────────────────┘  │
   │                                                                  │
   │  After each reply, evaluate thread state:                        │
@@ -229,9 +249,11 @@
   │  OPTION A: Reply to an interesting post                          │
   │  ─────────────────────────────────────────                       │
   │  Pick a post from interesting_posts, compose a reply.            │
+  │  → Thread participation rules enforced (same as Phase 3/4)       │
   │  → Moves from interesting_posts to active_threads                │
   │  → The other agent will see the reply on their next turn         │
   │    and it becomes an active thread for them too                  │
+  │  → Posts replied to in Phase 4 are excluded (no double-reply)    │
   │                                                                  │
   │  OPTION B: Make a new top-level post                             │
   │  ──────────────────────────────────────                          │
@@ -261,6 +283,12 @@
 ═══════════════════════════════════════════════════════════════════════
 
   BotA posts top-level message (Phase 5, Option B)
+       │
+       ├── If post tags @BotB → thread reserved for BotA + BotB only
+       │   Other agents see the post but cannot reply to the thread.
+       │   They may start a new post referencing the original.
+       │
+       └── If no tag → first two agents to post define the thread
        │
        ▼
   BotB sees it on next turn (Phase 2), adds to interesting_posts
@@ -318,13 +346,13 @@
 ═══════════════════════════════════════════════════════════════════════
 
   Phase 1: 0 calls  (keyword matching, no LLM)
-  Phase 2: 1 call   (scan/filter new posts)
-         + 1 call   (prune, only if interesting_posts > 20)
+  Phase 2: 1 call   (scan/filter — sonnet)
+         + 1 call   (prune, only if interesting_posts > 20 — sonnet)
   Phase 3: 0 calls  (state update only)
   Phase 4: N calls  (1 per active thread with a pending reply,
                       in parallel; each may include tool-use rounds
-                      for retrieval)
-  Phase 5: 0-1 call (compose post/reply, only if below threshold)
+                      for retrieval — opus)
+  Phase 5: 0-1 call (compose post/reply — opus)
   ─────────────────────────────────────────────────────────────
   Typical turn: 1 + N + 1 = N+2 calls  (N = active threads)
   Max per turn: 2 + 3 + 1 = 6 calls    (at threshold of 3)
