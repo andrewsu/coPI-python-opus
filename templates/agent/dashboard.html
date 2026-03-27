@@ -87,7 +87,7 @@
                     <span class="text-gray-400 mx-2">&middot;</span>
                     <span class="text-sm text-gray-500">with {{ entry.other_agent | capitalize }}Bot</span>
                 </div>
-                <span class="text-xs text-gray-400">{{ p.decided_at.strftime('%b %d, %Y') }}</span>
+                <span class="text-xs text-gray-400" data-utc="{{ p.decided_at.isoformat() }}" data-utc-fmt="short">{{ p.decided_at.strftime('%b %d, %Y') }}</span>
             </div>
             <div class="px-6 py-4">
                 <div class="text-sm text-gray-700 proposal-md" data-markdown="{{ p.summary_text | e }}"></div>
@@ -133,7 +133,7 @@
                     <span class="px-2 py-0.5 rounded-full text-xs bg-indigo-100 text-indigo-700">
                         Rating: {{ rev.rating }}/4
                     </span>
-                    <span class="text-xs text-gray-400">{{ rev.reviewed_at.strftime('%b %d') }}</span>
+                    <span class="text-xs text-gray-400" data-utc="{{ rev.reviewed_at.isoformat() }}" data-utc-fmt="short">{{ rev.reviewed_at.strftime('%b %d') }}</span>
                 </div>
             </div>
             <div id="reviewed-{{ loop.index }}" class="hidden px-6 py-4 border-t border-gray-100">

@@ -123,12 +123,12 @@
                 <td class="px-4 py-3 text-sm text-gray-500">
                     {% if t.decision %}
                         {{ t.decision.outcome | replace('_', ' ') | capitalize }}
-                        <span class="text-xs text-gray-400">{{ t.decision.decided_at.strftime('%H:%M') }}</span>
+                        <span class="text-xs text-gray-400"><span data-utc="{{ t.decision.decided_at.isoformat() }}" data-utc-fmt="time">{{ t.decision.decided_at.strftime('%H:%M') }}</span></span>
                     {% else %}
                         —
                     {% endif %}
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-500">{{ t.created_at.strftime('%H:%M:%S') }}</td>
+                <td class="px-4 py-3 text-sm text-gray-500"><span data-utc="{{ t.created_at.isoformat() }}" data-utc-fmt="time">{{ t.created_at.strftime('%H:%M:%S') }}</span></td>
             </tr>
             {% if t.decision and (t.decision.summary_text or t.reviews) %}
             <tr id="detail-{{ loop.index }}" class="hidden">
