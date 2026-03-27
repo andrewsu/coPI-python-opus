@@ -132,6 +132,27 @@ async def generate_agent_response(
             return ""
         response_text = message.content[0].text
 
+        # Retry once with higher max_tokens if response was truncated
+        if message.stop_reason == "max_tokens":
+            retry_max = max_tokens * 2
+            logger.warning(
+                "Response truncated (stop_reason=max_tokens, %d tokens). "
+                "Retrying with max_tokens=%d",
+                message.usage.output_tokens, retry_max,
+            )
+            t0 = time.monotonic()
+            retry_msg = client.messages.create(
+                model=model,
+                max_tokens=retry_max,
+                system=system_prompt,
+                messages=messages,
+            )
+            retry_latency = (time.monotonic() - t0) * 1000
+            latency_ms += retry_latency
+            if retry_msg.content:
+                response_text = retry_msg.content[0].text
+            message = retry_msg  # use retry stats for logging
+
         if _call_log_callback and log_meta:
             from datetime import datetime, timezone
             _call_log_callback({

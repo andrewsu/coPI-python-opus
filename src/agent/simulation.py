@@ -714,7 +714,7 @@ class SimulationEngine:
                 system_prompt=system_prompt,
                 messages=messages,
                 model=settings.llm_agent_model_opus,
-                max_tokens=600,
+                max_tokens=1000,
                 log_meta={"agent_id": agent.agent_id, "phase": "new_post"},
             )
             if not response or not response.strip():
