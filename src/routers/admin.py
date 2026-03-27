@@ -571,18 +571,38 @@ async def admin_discussions(
         else:
             t["reviews"] = []
 
+    # Add orphaned decisions (thread_decisions with no matching root post in agent_messages)
+    known_thread_ids = {t["message_ts"] for t in threads}
+    for td in all_decisions:
+        if td.thread_id not in known_thread_ids:
+            other_agents = replier_map.get(td.thread_id, set())
+            poster_id = td.agent_a
+            replier = td.agent_b if td.agent_a == poster_id else td.agent_a
+            threads.append({
+                "message_ts": td.thread_id,
+                "channel_name": td.channel,
+                "agent_id": poster_id,
+                "created_at": td.decided_at,
+                "reply_count": reply_count_map.get(td.thread_id, 0),
+                "replier": replier,
+                "status": td.outcome,
+                "decision": td,
+                "reviews": reviews_by_decision.get(str(td.id), []),
+            })
+            known_thread_ids.add(td.thread_id)
+            available_channels.add(td.channel)
+
     # Count by status (before filtering)
     counts: dict[str, int] = {}
-    for post in root_posts:
-        ts = post.message_ts
-        decision = decision_map.get(ts)
-        if decision:
-            s = decision.outcome
-        elif reply_count_map.get(ts, 0) > 0:
-            s = "active"
-        else:
-            s = "no_replies"
+    for t in threads:
+        s = t["status"]
         counts[s] = counts.get(s, 0) + 1
+
+    # Apply filters
+    if channel_filter:
+        threads = [t for t in threads if t["channel_name"] == channel_filter]
+    if status_filter:
+        threads = [t for t in threads if t["status"] == status_filter]
 
     return templates.TemplateResponse(
         request,
