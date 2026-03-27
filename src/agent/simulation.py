@@ -574,9 +574,9 @@ class SimulationEngine:
         """Check if a thread should be closed based on the latest reply."""
         # Check for ✅ confirmation of a :memo: Summary
         if "✅" in latest_reply:
-            # Look back in thread history for a :memo: Summary from the other agent
+            # Look back in thread history for the latest :memo: Summary from the other agent
             history = self.message_log.get_thread_history(thread.thread_id)
-            for entry in history:
+            for entry in reversed(history):
                 if entry.sender_agent_id == thread.other_agent_id and ":memo:" in entry.content:
                     # Proposal confirmed!
                     logger.info(
