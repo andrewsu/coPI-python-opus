@@ -16,7 +16,7 @@ from src.agent.message_log import LogEntry, MessageLog
 from src.agent.state import PostRef, ProposalRef, ThreadState
 from src.agent.tools import TOOL_DEFINITIONS, execute_tool
 from src.config import get_settings
-from src.models import AgentMessage, LlmCallLog, SimulationRun, ThreadDecision
+from src.models import AgentMessage, LlmCallLog, ProposalReview, SimulationRun, ThreadDecision
 from src.services.llm import (
     generate_agent_response,
     generate_with_tools,
@@ -145,6 +145,9 @@ class SimulationEngine:
         while self._running and self.is_within_time_limit:
             # Poll Slack for PI messages
             await self._poll_slack_for_pi_messages()
+
+            # Sync proposal reviews from web app
+            await self._sync_proposal_reviews_from_db()
 
             # Select agent
             agent = self._select_agent()
@@ -1089,6 +1092,37 @@ class SimulationEngine:
             logger.debug("Flushed %d LLM call logs to DB", len(batch))
         except Exception as exc:
             logger.warning("Failed to flush LLM call logs: %s", exc)
+
+    async def _sync_proposal_reviews_from_db(self) -> None:
+        """Check DB for web-app proposal reviews and mark in-memory proposals as reviewed."""
+        if not self.session_factory or not self.simulation_run_id:
+            return
+        try:
+            async with self.session_factory() as db:
+                from sqlalchemy import select as sa_select
+                # Get all reviews for proposals in this simulation run
+                result = await db.execute(
+                    sa_select(ProposalReview.agent_id, ThreadDecision.thread_id)
+                    .join(ThreadDecision, ProposalReview.thread_decision_id == ThreadDecision.id)
+                    .where(ThreadDecision.simulation_run_id == self.simulation_run_id)
+                )
+                reviewed_set = {(r.agent_id, r.thread_id) for r in result}
+
+            if not reviewed_set:
+                return
+
+            # Mark matching in-memory proposals as reviewed
+            for agent in self.agents.values():
+                for proposal in agent.state.pending_proposals:
+                    if not proposal.reviewed:
+                        if (agent.agent_id, proposal.thread_id) in reviewed_set:
+                            proposal.reviewed = True
+                            logger.info(
+                                "[%s] Proposal for thread %s marked reviewed via web app",
+                                agent.agent_id, proposal.thread_id,
+                            )
+        except Exception as exc:
+            logger.debug("Proposal review sync failed: %s", exc)
 
     async def _log_message(
         self,
