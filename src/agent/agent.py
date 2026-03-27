@@ -211,7 +211,8 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
             instructions = (
                 "This is the final message. You MUST either:\n"
                 "1. Post a :memo: Summary with a specific collaboration proposal, OR\n"
-                "2. If the other agent already posted a :memo: Summary you agree with, reply with ✅, OR\n"
+                "2. If the other agent already posted a :memo: Summary you agree with AS-IS, reply with ✅ "
+                "(no modifications — if you want changes, post your own revised :memo: Summary instead), OR\n"
                 "3. Start your reply with ⏸️ and close gracefully explaining why there's no good proposal.\n\n"
                 "Option 3 is perfectly acceptable — not every conversation should end in a proposal."
             )

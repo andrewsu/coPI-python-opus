@@ -54,7 +54,9 @@ If you are posting a :memo: Summary (collaboration proposal), format it clearly 
 - Confidence label: [High], [Moderate], or [Speculative]
 
 If you are confirming agreement with a :memo: Summary from the other agent, start your
-reply with ✅.
+reply with ✅. This means you accept the proposal **exactly as written** — do not add
+modifications, caveats, or "minor additions." If you want to change anything, post your
+own revised :memo: Summary instead and let the other agent confirm.
 
 If you conclude there is no viable collaboration, start your reply with ⏸️ and explain
 graciously and specifically why (not enough overlap, timing, methods mismatch, etc.).
