@@ -560,6 +560,26 @@ async def admin_discussions(
     if status_filter:
         threads = [t for t in threads if t["status"] == status_filter]
 
+    # Get proposal reviews for this run
+    from src.models import ProposalReview as PR
+    reviews_result = await db.execute(
+        select(PR)
+        .join(ThreadDecision, PR.thread_decision_id == ThreadDecision.id)
+        .where(ThreadDecision.simulation_run_id == selected_run_id)
+        .order_by(PR.reviewed_at)
+    )
+    all_reviews = reviews_result.scalars().all()
+    reviews_by_decision: dict[str, list] = {}
+    for rev in all_reviews:
+        reviews_by_decision.setdefault(str(rev.thread_decision_id), []).append(rev)
+
+    # Attach reviews to threads
+    for t in threads:
+        if t["decision"]:
+            t["reviews"] = reviews_by_decision.get(str(t["decision"].id), [])
+        else:
+            t["reviews"] = []
+
     # Count by status (before filtering)
     counts: dict[str, int] = {}
     for post in root_posts:
@@ -616,6 +636,35 @@ async def admin_agents(
     users_result = await db.execute(select(User).order_by(User.name))
     all_users = users_result.scalars().all()
 
+    # Check which agents have .env tokens
+    from src.config import get_settings
+    settings = get_settings()
+    env_tokens = settings.get_slack_tokens()
+    env_token_agents = {
+        aid for aid, tokens in env_tokens.items()
+        if tokens.get("bot") and not tokens["bot"].startswith("xoxb-placeholder")
+    }
+
+    # Count unreviewed proposals per agent
+    from src.models import ProposalReview
+    proposal_counts: dict[str, int] = {}
+    review_counts: dict[str, int] = {}
+    for agent in agents:
+        aid = agent.agent_id
+        total_result = await db.execute(
+            select(func.count(ThreadDecision.id)).where(
+                ThreadDecision.outcome == "proposal",
+                (ThreadDecision.agent_a == aid) | (ThreadDecision.agent_b == aid),
+            )
+        )
+        proposal_counts[aid] = total_result.scalar() or 0
+        rev_result = await db.execute(
+            select(func.count(ProposalReview.id)).where(
+                ProposalReview.agent_id == aid,
+            )
+        )
+        review_counts[aid] = rev_result.scalar() or 0
+
     pending = [a for a in agents if a.status == "pending"]
     active = [a for a in agents if a.status == "active"]
     suspended = [a for a in agents if a.status == "suspended"]
@@ -632,6 +681,9 @@ async def admin_agents(
             suspended=suspended,
             user_map=user_map,
             all_users=all_users,
+            env_token_agents=env_token_agents,
+            proposal_counts=proposal_counts,
+            review_counts=review_counts,
         ),
     )
 

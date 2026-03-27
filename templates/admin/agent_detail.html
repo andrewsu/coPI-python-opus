@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Admin — Agent {{ agent.bot_name }} — CoPI{% endblock %}
 
+{% block extra_head %}
+<style>
+    input[type="text"], textarea, select { border: 1px solid #d1d5db; padding: 0.5rem 0.75rem; border-radius: 0.375rem; }
+    input[type="text"]:focus, textarea:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.2); }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="max-w-2xl mx-auto">
     <a href="/admin/agents" class="text-sm text-gray-500 hover:text-gray-700">&larr; Agents</a>
@@ -26,7 +33,9 @@
             {% if linked_user %}
             <div>
                 <span class="text-gray-500">Linked user:</span>
-                <span class="ml-2">{{ linked_user.name }} ({{ linked_user.orcid }})</span>
+                <a href="/admin/users/{{ linked_user.id }}" class="ml-2 text-indigo-600 hover:text-indigo-800">
+                    {{ linked_user.name }} ({{ linked_user.orcid }})
+                </a>
             </div>
             {% endif %}
             <div>
@@ -41,27 +50,28 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Agent ID (slug)</label>
                     <input type="text" name="agent_slug" value="{{ agent.agent_id or '' }}"
                            placeholder="e.g. wiseman"
-                           class="w-full text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                           class="w-full text-sm">
                     <p class="text-xs text-gray-400 mt-1">Lowercase, no spaces. Used for file paths and env vars.</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Bot Name</label>
                     <input type="text" name="bot_name" value="{{ agent.bot_name }}"
                            placeholder="e.g. WisemanBot"
-                           class="w-full text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                           class="w-full text-sm">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Slack Bot Token</label>
                     <input type="text" name="slack_bot_token" value="{{ agent.slack_bot_token or '' }}"
                            placeholder="xoxb-..."
-                           class="w-full text-sm font-mono border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                    <p class="text-xs text-gray-400 mt-1">SLACK_BOT_TOKEN for this agent. Create a Slack app first.</p>
+                           class="w-full text-sm font-mono">
+                    <p class="text-xs text-gray-400 mt-1">SLACK_BOT_TOKEN for this agent. Add to .env as SLACK_BOT_TOKEN_&lt;AGENTID&gt;.</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Slack App Token</label>
                     <input type="text" name="slack_app_token" value="{{ agent.slack_app_token or '' }}"
                            placeholder="xapp-..."
-                           class="w-full text-sm font-mono border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                           class="w-full text-sm font-mono">
+                    <p class="text-xs text-gray-400 mt-1">Add to .env as SLACK_APP_TOKEN_&lt;AGENTID&gt;.</p>
                 </div>
             </div>
 
@@ -70,16 +80,17 @@
                         class="px-5 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700">
                     {% if agent.status == 'pending' %}Approve & Activate{% else %}Save Changes{% endif %}
                 </button>
-                {% if agent.status == 'pending' %}
-                <form method="POST" action="/admin/agents/{{ agent.id }}/reject" class="inline">
-                    <button type="submit"
-                            class="px-5 py-2 bg-red-100 text-red-700 text-sm font-medium rounded-lg hover:bg-red-200">
-                        Reject
-                    </button>
-                </form>
-                {% endif %}
             </div>
         </form>
+
+        {% if agent.status == 'pending' %}
+        <form method="POST" action="/admin/agents/{{ agent.id }}/reject" class="mt-3">
+            <button type="submit"
+                    class="px-5 py-2 bg-red-100 text-red-700 text-sm font-medium rounded-lg hover:bg-red-200">
+                Reject
+            </button>
+        </form>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

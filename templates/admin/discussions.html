@@ -117,10 +117,27 @@
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-500">{{ t.created_at.strftime('%H:%M:%S') }}</td>
             </tr>
-            {% if t.decision and t.decision.summary_text %}
+            {% if t.decision and (t.decision.summary_text or t.reviews) %}
             <tr id="detail-{{ loop.index }}" class="hidden">
                 <td colspan="7" class="px-6 py-4 bg-gray-50">
-                    <div class="text-sm text-gray-700 max-w-3xl whitespace-pre-wrap">{{ t.decision.summary_text }}</div>
+                    {% if t.decision.summary_text %}
+                    <div class="text-sm text-gray-700 max-w-3xl whitespace-pre-wrap mb-4">{{ t.decision.summary_text }}</div>
+                    {% endif %}
+                    {% if t.reviews %}
+                    <div class="border-t border-gray-200 pt-3 mt-3">
+                        <h4 class="text-xs font-semibold text-gray-500 uppercase mb-2">PI Reviews</h4>
+                        {% for rev in t.reviews %}
+                        <div class="flex items-start gap-3 mb-2 text-sm">
+                            <span class="px-2 py-0.5 rounded-full text-xs bg-indigo-100 text-indigo-700">{{ rev.rating }}/4</span>
+                            <span class="font-medium text-gray-700">{{ rev.agent_id | capitalize }}Bot's PI</span>
+                            {% if rev.comment %}
+                            <span class="text-gray-500 italic">"{{ rev.comment }}"</span>
+                            {% endif %}
+                            <span class="text-xs text-gray-400">{{ rev.reviewed_at.strftime('%b %d %H:%M') }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </td>
             </tr>
             {% endif %}

@@ -62,25 +62,29 @@
             <tr>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Agent ID</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bot Name</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">PI</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Linked User</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tokens</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proposals</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
             {% for a in active %}
+            {% set total_proposals = proposal_counts.get(a.agent_id, 0) %}
+            {% set total_reviewed = review_counts.get(a.agent_id, 0) %}
+            {% set unreviewed = total_proposals - total_reviewed %}
             <tr class="hover:bg-gray-50">
                 <td class="px-4 py-3 text-sm font-mono">{{ a.agent_id }}</td>
                 <td class="px-4 py-3 text-sm font-medium">{{ a.bot_name }}</td>
-                <td class="px-4 py-3 text-sm">{{ a.pi_name }}</td>
                 <td class="px-4 py-3 text-sm">
                     {% if a.user_id and user_map.get(a.user_id | string) %}
-                        <span class="text-green-600">{{ user_map[a.user_id | string] }}</span>
+                        <a href="/admin/users/{{ a.user_id }}" class="text-indigo-600 hover:text-indigo-800">
+                            {{ user_map[a.user_id | string] }}
+                        </a>
                     {% else %}
                         <form method="POST" action="/admin/agents/{{ a.id }}/link" class="flex gap-1">
                             <select name="user_id" class="text-xs border-gray-300 rounded-md py-1">
-                                <option value="">— Link user —</option>
+                                <option value="">-- Link user --</option>
                                 {% for u in all_users %}
                                 <option value="{{ u.id }}">{{ u.name }}</option>
                                 {% endfor %}
@@ -91,9 +95,21 @@
                 </td>
                 <td class="px-4 py-3 text-sm">
                     {% if a.slack_bot_token %}
-                        <span class="text-green-500 text-xs">Bot token set</span>
+                        <span class="text-green-500 text-xs">DB token</span>
+                    {% elif a.agent_id in env_token_agents %}
+                        <span class="text-green-500 text-xs">.env token</span>
                     {% else %}
                         <span class="text-gray-400 text-xs">No tokens</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-sm">
+                    {% if unreviewed > 0 %}
+                        <span class="text-amber-600 font-medium">{{ unreviewed }} to review</span>
+                        <span class="text-gray-400">({{ total_proposals }} total)</span>
+                    {% elif total_proposals > 0 %}
+                        <span class="text-green-600">{{ total_proposals }} reviewed</span>
+                    {% else %}
+                        <span class="text-gray-400">0</span>
                     {% endif %}
                 </td>
                 <td class="px-4 py-3">
