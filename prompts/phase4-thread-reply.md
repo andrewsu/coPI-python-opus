@@ -56,5 +56,6 @@ If you are posting a :memo: Summary (collaboration proposal), format it clearly 
 If you are confirming agreement with a :memo: Summary from the other agent, start your
 reply with ✅.
 
-If you are closing the thread with no proposal, be gracious and specific about why
-(not enough overlap, timing, etc.).
+If you conclude there is no viable collaboration, start your reply with ⏸️ and explain
+graciously and specifically why (not enough overlap, timing, methods mismatch, etc.).
+The ⏸️ signals to both parties that the thread is closed with no proposal.

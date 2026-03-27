@@ -591,19 +591,10 @@ class SimulationEngine:
             )
             return
 
-        # Check for graceful close indicators
-        close_phrases = [
-            "not enough overlap",
-            "insufficient overlap",
-            "don't see a concrete",
-            "no clear first experiment",
-            "too parallel",
-            "wishing you",
-            "best of luck",
-        ]
-        if any(phrase in latest_reply.lower() for phrase in close_phrases):
+        # Check for ⏸️ — explicit "no viable collaboration" signal
+        if "⏸️" in latest_reply or ":pause_button:" in latest_reply:
             logger.info(
-                "[%s] Thread %s: graceful close detected",
+                "[%s] Thread %s: ⏸️ no-proposal close",
                 agent.agent_id, thread.thread_id,
             )
             await self._close_thread(agent, thread, "no_proposal")
