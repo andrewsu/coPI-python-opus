@@ -56,7 +56,7 @@ async def admin_users(
     current_user: User = Depends(get_admin_user),
 ):
     """Admin users overview."""
-    query = select(User).options(selectinload(User.profile), selectinload(User.jobs))
+    query = select(User).options(selectinload(User.profile), selectinload(User.jobs), selectinload(User.agent))
 
     result = await db.execute(query)
     users = result.scalars().unique().all()
@@ -95,11 +95,20 @@ async def admin_users(
         if claimed_filter == "unclaimed" and user.claimed_at:
             continue
 
+        # Agent status
+        if not user.agent:
+            agent_status = "not_requested"
+        elif user.agent.status == "pending":
+            agent_status = "awaiting_token"
+        else:
+            agent_status = user.agent.status  # "active" or "suspended"
+
         user_data.append({
             "user": user,
             "profile": profile,
             "profile_status": profile_status,
             "pub_count": pub_count,
+            "agent_status": agent_status,
         })
 
     return templates.TemplateResponse(
