@@ -192,7 +192,20 @@ async def request_agent(
         return RedirectResponse(url="/agent", status_code=302)
 
     # Create pending agent request
+    # agent_id is the last name, lowercased, ASCII-only
+    last_name = current_user.name.split()[-1].lower()
+    agent_id = "".join(c for c in last_name if c.isalpha())
+
+    # Ensure uniqueness — append first initial if collision
+    collision = await db.execute(
+        select(AgentRegistry).where(AgentRegistry.agent_id == agent_id)
+    )
+    if collision.scalar_one_or_none():
+        first_initial = current_user.name[0].lower()
+        agent_id = f"{first_initial}{agent_id}"
+
     agent = AgentRegistry(
+        agent_id=agent_id,
         user_id=current_user.id,
         bot_name=f"{current_user.name.split()[-1]}Bot",
         pi_name=current_user.name,

@@ -8,6 +8,8 @@ from fastapi import Cookie, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy.orm import selectinload
+
 from src.database import get_db
 from src.models import User
 
@@ -38,7 +40,9 @@ async def get_current_user(
             headers={"Location": "/login"},
         )
 
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(
+        select(User).options(selectinload(User.profile)).where(User.id == user_id)
+    )
     session_user = result.scalar_one_or_none()
 
     if session_user is None:
@@ -53,7 +57,9 @@ async def get_current_user(
     if impersonate_id and session_user.is_admin:
         try:
             imp_uuid = uuid.UUID(impersonate_id)
-            result = await db.execute(select(User).where(User.id == imp_uuid))
+            result = await db.execute(
+                select(User).options(selectinload(User.profile)).where(User.id == imp_uuid)
+            )
             imp_user = result.scalar_one_or_none()
             if imp_user:
                 # Tag so templates can show impersonation banner
