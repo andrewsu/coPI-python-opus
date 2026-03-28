@@ -30,9 +30,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 PROFILES_DIR = Path("profiles/public")
-POSTED_LOG = Path("/tmp/grantbot_posted.json")
+POSTED_LOG = Path("data/grantbot_posted.json")
 
-app = typer.Typer()
+app = typer.Typer(invoke_without_command=True)
 
 
 def _load_researcher_profiles() -> dict[str, dict[str, Any]]:
@@ -241,11 +241,46 @@ Respond in JSON format:
         return None
 
 
+def _ensure_channel_membership(slack_client, channel_names: set[str]) -> None:
+    """Join any public channels the bot isn't already a member of."""
+    try:
+        # Build a map of channel name -> id for all public channels
+        channel_map: dict[str, str] = {}
+        cursor = None
+        while True:
+            resp = slack_client.conversations_list(
+                types="public_channel",
+                exclude_archived=True,
+                limit=200,
+                cursor=cursor,
+            )
+            for ch in resp.get("channels", []):
+                channel_map[ch["name"]] = ch["id"]
+            cursor = resp.get("response_metadata", {}).get("next_cursor")
+            if not cursor:
+                break
+
+        for name in channel_names:
+            clean_name = name.lstrip("#")
+            ch_id = channel_map.get(clean_name)
+            if not ch_id:
+                logger.warning("Channel #%s not found in workspace", clean_name)
+                continue
+            try:
+                slack_client.conversations_join(channel=ch_id)
+                logger.info("Joined #%s", clean_name)
+            except Exception as exc:
+                logger.warning("Could not join #%s: %s", clean_name, exc)
+    except Exception as exc:
+        logger.warning("Failed to list channels for auto-join: %s", exc)
+
+
 async def run_grantbot(
     channel: str = "funding-opportunities",
     dry_run: bool = False,
     max_queries: int = 30,
     max_posts: int = 10,
+    max_per_channel: int = 1,
 ) -> list[dict]:
     """Main GrantBot pipeline.
 
@@ -307,11 +342,20 @@ async def run_grantbot(
             result["opportunity"] = opp
             scored.append(result)
 
-    # Sort by score descending, take top N
+    # Sort by score descending, then pick top per channel
     scored.sort(key=lambda x: x.get("score", 0), reverse=True)
-    to_post = scored[:max_posts]
+    channel_counts: dict[str, int] = {}
+    to_post: list[dict] = []
+    for item in scored:
+        ch = item.get("channel", channel)
+        if channel_counts.get(ch, 0) >= max_per_channel:
+            continue
+        channel_counts[ch] = channel_counts.get(ch, 0) + 1
+        to_post.append(item)
+        if len(to_post) >= max_posts:
+            break
 
-    logger.info("Scored %d opportunities, posting top %d", len(scored), len(to_post))
+    logger.info("Scored %d opportunities, posting %d (max %d per channel)", len(scored), len(to_post), max_per_channel)
 
     # 7. Post to Slack (or dry-run)
     posted_list = []
@@ -321,11 +365,11 @@ async def run_grantbot(
         from slack_sdk import WebClient
         bot_token = getattr(settings, "slack_bot_token_grantbot", "")
         if not bot_token or bot_token.startswith("xoxb-placeholder"):
-            # Fall back to using SuBot's token for now
             bot_token = settings.slack_bot_token_su
             logger.info("No grantbot Slack token — using SuBot's token as fallback")
         if bot_token and not bot_token.startswith("xoxb-placeholder"):
             slack_client = WebClient(token=bot_token)
+            _ensure_channel_membership(slack_client, {item.get("channel", channel) for item in to_post})
 
     for item in to_post:
         opp = item["opportunity"]
@@ -370,12 +414,32 @@ async def run_grantbot(
     return posted_list
 
 
+LAST_RUN_FILE = Path("data/grantbot_last_run.txt")
+
+
+def _should_run_today() -> bool:
+    """Return True if grantbot hasn't completed a run today (UTC)."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if LAST_RUN_FILE.exists():
+        last_date = LAST_RUN_FILE.read_text(encoding="utf-8").strip()
+        return last_date != today
+    return True
+
+
+def _mark_run_complete() -> None:
+    """Record that grantbot ran today."""
+    LAST_RUN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    LAST_RUN_FILE.write_text(today, encoding="utf-8")
+
+
 @app.command()
 def main(
     channel: str = typer.Option("funding-opportunities", "--channel", help="Slack channel to post to"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview posts without sending to Slack"),
     max_queries: int = typer.Option(30, "--max-queries", help="Max number of search queries"),
     max_posts: int = typer.Option(10, "--max-posts", help="Max opportunities to post per run"),
+    max_per_channel: int = typer.Option(1, "--max-per-channel", help="Max opportunities to post per channel per run"),
 ):
     """Search for funding opportunities and post relevant ones to Slack."""
     results = asyncio.run(run_grantbot(
@@ -383,6 +447,7 @@ def main(
         dry_run=dry_run,
         max_queries=max_queries,
         max_posts=max_posts,
+        max_per_channel=max_per_channel,
     ))
     if results:
         typer.echo(f"\nPosted {len(results)} opportunities:")
@@ -390,6 +455,49 @@ def main(
             typer.echo(f"  [{r['score']}/10] {r['number']}: {r['title']}")
     else:
         typer.echo("No new relevant opportunities found.")
+    if not dry_run:
+        _mark_run_complete()
+
+
+@app.command("scheduler")
+def scheduler(
+    channel: str = typer.Option("funding-opportunities", "--channel", help="Slack channel to post to"),
+    max_queries: int = typer.Option(30, "--max-queries", help="Max number of search queries"),
+    max_posts: int = typer.Option(10, "--max-posts", help="Max opportunities to post per run"),
+    max_per_channel: int = typer.Option(1, "--max-per-channel", help="Max opportunities to post per channel per run"),
+    run_hour: int = typer.Option(8, "--run-hour", help="UTC hour to run daily (0-23)"),
+    check_interval: int = typer.Option(900, "--check-interval", help="Seconds between schedule checks"),
+):
+    """Long-running scheduler that executes grantbot once per calendar day.
+
+    If the container starts after the scheduled hour, it runs immediately
+    to catch up on the missed execution.
+    """
+    import time
+
+    logger.info("GrantBot scheduler started (run_hour=%d UTC, check every %ds)", run_hour, check_interval)
+
+    while True:
+        now = datetime.now(timezone.utc)
+        if _should_run_today() and now.hour >= run_hour:
+            logger.info("Running daily grant search...")
+            try:
+                results = asyncio.run(run_grantbot(
+                    channel=channel,
+                    max_queries=max_queries,
+                    max_posts=max_posts,
+                    max_per_channel=max_per_channel,
+                ))
+                _mark_run_complete()
+                logger.info("Daily run complete: %d opportunities posted", len(results))
+            except Exception as exc:
+                logger.error("Daily run failed: %s", exc, exc_info=True)
+        else:
+            logger.debug("No run needed (last run: %s, hour: %d)",
+                         LAST_RUN_FILE.read_text().strip() if LAST_RUN_FILE.exists() else "never",
+                         now.hour)
+
+        time.sleep(check_interval)
 
 
 if __name__ == "__main__":

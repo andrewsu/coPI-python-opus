@@ -1,0 +1,169 @@
+services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-copi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-copi}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-copi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /copi/postgres
+        tag: postgres
+        awslogs-create-group: "true"
+        awslogs-region: ${AWS_REGION:-us-east-2}
+
+  app:
+    build:
+      context: .
+    restart: unless-stopped
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    expose:
+      - "8000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-copi}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-copi}
+    volumes:
+      - ./profiles:/app/profiles
+      - ./prompts:/app/prompts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen(\\\"http://127.0.0.1:8000/api/health\\\")\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /copi/app
+        tag: app
+        awslogs-create-group: "true"
+        awslogs-region: ${AWS_REGION:-us-east-2}
+
+  worker:
+    build:
+      context: .
+    restart: unless-stopped
+    command: ["python", "-m", "src.worker.main"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-copi}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-copi}
+    volumes:
+      - ./profiles:/app/profiles
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /copi/worker
+        tag: worker
+        awslogs-create-group: "true"
+        awslogs-region: ${AWS_REGION:-us-east-2}
+
+  agent:
+    build:
+      context: .
+    command: ["python", "-m", "src.agent.main"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-copi}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-copi}
+    volumes:
+      - ./profiles:/app/profiles
+      - ./prompts:/app/prompts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - agent
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /copi/agent
+        tag: agent
+        awslogs-create-group: "true"
+        awslogs-region: ${AWS_REGION:-us-east-2}
+
+  grantbot:
+    build:
+      context: .
+    restart: unless-stopped
+    command: ["python", "-m", "src.agent.grantbot", "scheduler", "--run-hour", "8", "--max-per-channel", "1"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-copi}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-copi}
+    volumes:
+      - ./profiles:/app/profiles
+      - ./prompts:/app/prompts
+      - grantbot_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /copi/grantbot
+        tag: grantbot
+        awslogs-create-group: "true"
+        awslogs-region: ${AWS_REGION:-us-east-2}
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/templates/default.conf.template:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --no-check-certificate -O /dev/null https://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    command: "/bin/sh -c '/docker-entrypoint.d/20-envsubst-on-templates.sh && (while :; do sleep 6h & wait $${!}; nginx -s reload; done &) && nginx -g \"daemon off;\"'"
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /copi/nginx
+        tag: nginx
+        awslogs-create-group: "true"
+        awslogs-region: ${AWS_REGION:-us-east-2}
+
+  certbot:
+    image: certbot/certbot:latest
+    restart: unless-stopped
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done'"
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /copi/certbot
+        tag: certbot
+        awslogs-create-group: "true"
+        awslogs-region: ${AWS_REGION:-us-east-2}
+
+volumes:
+  pgdata:
+  grantbot_data:
