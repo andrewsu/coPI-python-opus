@@ -11,7 +11,55 @@ SEARCH_URL = "https://api.grants.gov/v1/api/search2"
 DETAIL_URL = "https://api.grants.gov/v1/api/fetchOpportunity"
 
 # Agencies most relevant to biomedical research
-BIOMEDICAL_AGENCIES = ["HHS", "NSF"]
+BIOMEDICAL_AGENCIES = ["HHS-NIH11", "NSF"]
+
+
+async def list_posted_opportunities(
+    agencies: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Fetch all currently posted opportunities for the given agencies.
+
+    Paginates through results to get the complete list.
+    Returns list of {id, number, title, agency, open_date, close_date}.
+    """
+    if agencies is None:
+        agencies = BIOMEDICAL_AGENCIES
+
+    all_results: list[dict[str, Any]] = []
+    page_size = 250
+    start = 0
+
+    async with httpx.AsyncClient(timeout=60) as client:
+        while True:
+            payload = {
+                "oppStatuses": "posted",
+                "agencies": "|".join(agencies),
+                "rows": page_size,
+                "startRecordNum": start,
+            }
+            resp = await client.post(SEARCH_URL, json=payload)
+            resp.raise_for_status()
+            raw = resp.json()
+
+            data = raw.get("data", raw)
+            hits = data.get("oppHits", [])
+            for hit in hits:
+                all_results.append({
+                    "id": hit.get("id"),
+                    "number": hit.get("number", ""),
+                    "title": hit.get("title", ""),
+                    "agency": hit.get("agencyCode", ""),
+                    "open_date": hit.get("openDate", ""),
+                    "close_date": hit.get("closeDate", ""),
+                })
+
+            total = data.get("hitCount", 0)
+            start += page_size
+            if start >= total or not hits:
+                break
+
+    logger.info("Listed %d posted opportunities for %s", len(all_results), agencies)
+    return all_results
 
 
 async def search_opportunities(

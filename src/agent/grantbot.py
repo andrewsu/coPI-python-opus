@@ -21,7 +21,7 @@ from typing import Any
 import typer
 
 from src.config import get_settings
-from src.services.grants import search_opportunities, fetch_opportunity_detail
+from src.services.grants import fetch_opportunity_detail, list_posted_opportunities
 
 logging.basicConfig(
     level=logging.INFO,
@@ -137,25 +137,86 @@ def _save_posted_log(posted: set[str]) -> None:
     )
 
 
-async def _score_and_draft(
-    opportunity: dict[str, Any],
-    profiles: dict[str, dict],
-) -> dict[str, Any] | None:
-    """Use LLM to score relevance and draft a Slack post.
+async def _select_opportunities(
+    opportunities: dict[str, dict],
+    max_select: int = 30,
+) -> list[str]:
+    """Use LLM to select funding opportunities relevant to biomedical research at Scripps.
 
-    Returns {post_text, relevant_agents, score} or None if not relevant.
+    Returns a list of FOA numbers. No numeric scoring — just include/exclude.
     """
     from src.services.llm import generate_agent_response
 
-    # Build a compact summary of all researcher interests
-    researcher_lines = []
-    for agent_id, profile in profiles.items():
-        name = profile.get("name", agent_id)
-        areas = ", ".join(profile.get("disease_areas", [])[:5])
-        keywords = ", ".join(profile.get("keywords", [])[:5])
-        researcher_lines.append(f"- **{name}** ({agent_id}): {areas}. Keywords: {keywords}")
+    opp_lines = []
+    for num, opp in opportunities.items():
+        title = opp.get("title", "")
+        agency = opp.get("agency", "")
+        close_date = opp.get("close_date", "")
+        opp_lines.append(f"- {num} | {agency} | {title} | Closes: {close_date}")
+    opp_list = "\n".join(opp_lines)
 
-    researchers_summary = "\n".join(researcher_lines)
+    system_prompt = f"""You are GrantBot, selecting funding opportunities to share with researchers at Scripps Research, a biomedical research institute.
+
+Below is a list of {len(opportunities)} open funding opportunities (title and agency only).
+
+Select up to {max_select} opportunities that are relevant to biomedical research at a place like Scripps Research. Scripps Research focuses on basic and translational biomedical science including: drug discovery, structural biology, chemical biology, immunology, virology, neuroscience, aging, genomics, proteomics, computational biology, and related fields.
+
+INCLUDE:
+- NIH research grants (R01, R21, R33, U01, P01, U54, etc.) in biomedical areas
+- NSF grants at the biology/chemistry/computation interface
+- Multi-PI or collaborative mechanisms
+- Grants for methods development, tool building, or infrastructure relevant to biomedical research
+
+EXCLUDE:
+- Training grants (T32, F31, F32, K awards) unless unusually relevant
+- Clinical trials, health services research, or public health implementation
+- Administrative supplements, conference grants, or planning grants
+- Opportunities clearly outside biomedical research (agriculture, education, policy, etc.)
+- Opportunities with past close dates
+
+Respond with ONLY a JSON array of FOA numbers:
+["FOA-NUMBER-1", "FOA-NUMBER-2", ...]"""
+
+    user_msg = f"""## Funding Opportunities\n\n{opp_list}"""
+
+    try:
+        settings = get_settings()
+        response = await generate_agent_response(
+            system_prompt=system_prompt,
+            messages=[{"role": "user", "content": user_msg}],
+            model=settings.llm_agent_model_sonnet,
+            max_tokens=1500,
+            log_meta={"agent_id": "grantbot", "phase": "select"},
+        )
+
+        cleaned = response.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            if "```" in cleaned:
+                cleaned = cleaned[:cleaned.index("```")]
+            cleaned = cleaned.strip()
+        start = cleaned.find("[")
+        end = cleaned.rfind("]")
+        if start >= 0 and end > start:
+            cleaned = cleaned[start:end + 1]
+
+        selected = json.loads(cleaned)
+        logger.info("Selected %d of %d opportunities", len(selected), len(opportunities))
+        return selected[:max_select]
+    except Exception as exc:
+        logger.warning("Selection failed: %s — falling back to all", exc)
+        return list(opportunities.keys())[:max_select]
+
+
+async def _draft_post(
+    opportunity: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Draft a Slack post for a funding opportunity.
+
+    Returns {channel, post_text} or None if drafting fails.
+    Lab-specific relevance is left to the lab agents — GrantBot just summarizes the FOA.
+    """
+    from src.services.llm import generate_agent_response
 
     opp_text = f"""Title: {opportunity.get('title', '')}
 Number: {opportunity.get('number', '')}
@@ -164,16 +225,14 @@ Close Date: {opportunity.get('close_date', 'Not specified')}
 Description: {opportunity.get('description', '')[:2000]}
 Synopsis: {opportunity.get('synopsis', '')[:2000]}"""
 
-    system_prompt = """You are GrantBot, an AI assistant that identifies relevant federal funding opportunities for researchers at Scripps Research.
+    system_prompt = """You are GrantBot, posting funding opportunities for researchers at Scripps Research.
 
-Your task: evaluate whether a funding opportunity is relevant to any of the researchers listed below, and if so, draft a concise Slack post about it.
+Draft a concise Slack post summarizing this funding opportunity. The post should help researchers quickly decide if this FOA is worth reading in detail.
 
-IMPORTANT RULES:
-- Only flag opportunities that are genuinely relevant — a clear match between the FOA's scientific scope and a researcher's expertise
-- Tag specific researchers who should pay attention (use their agent_id)
-- Be concise: 3-5 sentences max describing the opportunity and why it's relevant
-- If the opportunity is not relevant to any researcher, respond with just: {"relevant": false}
-- Multi-PI or collaborative grants that could involve 2+ labs are especially worth flagging
+RULES:
+- Summarize the scientific scope and goals in 2-3 sentences
+- Note the mechanism type (R01, U01, etc.), budget range if available, and key eligibility details
+- Do NOT tag specific researchers or labs — lab agents will decide relevance themselves
 - Use Slack mrkdwn formatting: *bold* (single asterisks), _italic_ (underscores). Do NOT use **double asterisks** or emoji.
 
 Choose the best Slack channel for the post:
@@ -183,24 +242,14 @@ Choose the best Slack channel for the post:
 - "single-cell-omics" — single-cell sequencing, transcriptomics, genomics, multiomics
 - "chemical-biology" — chemical probes, proteomics, covalent ligands, ABPP
 - "funding-opportunities" — broad/cross-cutting opportunities that don't fit a specific topic
-- "general" — very broad opportunities relevant to many researchers
 
 Respond in JSON format:
 {
-  "relevant": true/false,
-  "score": 1-10,
-  "relevant_agents": ["agent_id1", "agent_id2"],
   "channel": "funding-opportunities",
   "post_text": "the Slack post text"
 }"""
 
-    user_msg = f"""## Researchers at Scripps Research
-
-{researchers_summary}
-
-## Funding Opportunity
-
-{opp_text}"""
+    user_msg = opp_text
 
     try:
         settings = get_settings()
@@ -209,17 +258,15 @@ Respond in JSON format:
             messages=[{"role": "user", "content": user_msg}],
             model=settings.llm_agent_model_sonnet,
             max_tokens=500,
-            log_meta={"agent_id": "grantbot", "phase": "score"},
+            log_meta={"agent_id": "grantbot", "phase": "draft"},
         )
 
-        # Parse JSON response — handle code fences and extra text
         cleaned = response.strip()
         if cleaned.startswith("```"):
             cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
             if "```" in cleaned:
                 cleaned = cleaned[:cleaned.index("```")]
             cleaned = cleaned.strip()
-        # Find the first JSON object
         start = cleaned.find("{")
         if start >= 0:
             depth = 0
@@ -232,12 +279,9 @@ Respond in JSON format:
                         cleaned = cleaned[start:i + 1]
                         break
 
-        result = json.loads(cleaned)
-        if result.get("relevant") and result.get("score", 0) >= 4:
-            return result
-        return None
+        return json.loads(cleaned)
     except Exception as exc:
-        logger.warning("LLM scoring failed for %s: %s", opportunity.get("number"), exc)
+        logger.warning("Draft failed for %s: %s", opportunity.get("number"), exc)
         return None
 
 
@@ -278,7 +322,6 @@ def _ensure_channel_membership(slack_client, channel_names: set[str]) -> None:
 async def run_grantbot(
     channel: str = "funding-opportunities",
     dry_run: bool = False,
-    max_queries: int = 30,
     max_posts: int = 10,
     max_per_channel: int = 1,
 ) -> list[dict]:
@@ -288,42 +331,32 @@ async def run_grantbot(
     """
     settings = get_settings()
 
-    # 1. Load researcher profiles
-    profiles = _load_researcher_profiles()
-    if not profiles:
-        logger.error("No researcher profiles found in %s", PROFILES_DIR)
-        return []
-
-    # 2. Build search queries
-    queries = _build_search_queries(profiles)
-    if max_queries:
-        queries = queries[:max_queries]
-
-    # 3. Load already-posted log
+    # 1. Load already-posted log
     posted = _load_posted_log()
     logger.info("Already posted %d opportunities", len(posted))
 
-    # 4. Search Grants.gov
-    all_opps: dict[str, dict] = {}  # number -> opportunity
-    for query in queries:
-        try:
-            opps = await search_opportunities(query, rows=10)
-            for opp in opps:
-                num = opp.get("number", "")
-                if num and num not in posted and num not in all_opps:
-                    all_opps[num] = opp
-        except Exception as exc:
-            logger.warning("Search failed for '%s': %s", query, exc)
+    # 2. Fetch all posted NIH/NSF opportunities from Grants.gov
+    raw_opps = await list_posted_opportunities()
+    all_opps: dict[str, dict] = {}
+    for opp in raw_opps:
+        num = opp.get("number", "")
+        if num and num not in posted:
+            all_opps[num] = opp
 
-    logger.info("Found %d new opportunities (after dedup and filtering posted)", len(all_opps))
+    logger.info("Found %d new opportunities (after filtering posted)", len(all_opps))
 
     if not all_opps:
         logger.info("No new opportunities to process")
         return []
 
-    # 5. Fetch details for top opportunities (limit API calls)
+    # 5. Select: LLM reviews titles to pick broadly relevant biomedical opportunities
+    selected_nums = await _select_opportunities(all_opps)
+    selected_opps = {num: all_opps[num] for num in selected_nums if num in all_opps}
+    logger.info("Selected %d opportunities for posting", len(selected_opps))
+
+    # 6. Fetch details for selected opportunities
     detailed_opps = []
-    for num, opp in list(all_opps.items())[:50]:
+    for num, opp in selected_opps.items():
         if opp.get("id"):
             try:
                 detail = await fetch_opportunity_detail(str(opp["id"]))
@@ -334,19 +367,18 @@ async def run_grantbot(
                 logger.debug("Detail fetch failed for %s: %s", num, exc)
         detailed_opps.append(opp)
 
-    # 6. Score and draft posts using LLM
-    scored: list[dict] = []
+    # 7. Draft posts using LLM
+    drafted: list[dict] = []
     for opp in detailed_opps:
-        result = await _score_and_draft(opp, profiles)
+        result = await _draft_post(opp)
         if result:
             result["opportunity"] = opp
-            scored.append(result)
+            drafted.append(result)
 
-    # Sort by score descending, then pick top per channel
-    scored.sort(key=lambda x: x.get("score", 0), reverse=True)
+    # Pick posts respecting per-channel limit
     channel_counts: dict[str, int] = {}
     to_post: list[dict] = []
-    for item in scored:
+    for item in drafted:
         ch = item.get("channel", channel)
         if channel_counts.get(ch, 0) >= max_per_channel:
             continue
@@ -355,7 +387,7 @@ async def run_grantbot(
         if len(to_post) >= max_posts:
             break
 
-    logger.info("Scored %d opportunities, posting %d (max %d per channel)", len(scored), len(to_post), max_per_channel)
+    logger.info("Drafted %d posts, posting %d (max %d per channel)", len(drafted), len(to_post), max_per_channel)
 
     # 7. Post to Slack (or dry-run)
     posted_list = []
@@ -375,7 +407,6 @@ async def run_grantbot(
         opp = item["opportunity"]
         opp_num = opp.get("number", "unknown")
         post_text = item.get("post_text", "")
-        relevant_agents = item.get("relevant_agents", [])
         target_channel = item.get("channel", "funding-opportunities")
 
         # Build the full post
@@ -383,10 +414,6 @@ async def run_grantbot(
         grants_url = f"https://www.grants.gov/search-results-detail/{opp.get('id', '')}"
         header = f":moneybag: *Funding Opportunity*\n*{opp.get('title', '')}*\n{opp_num} | Closes: {close_date}\n{grants_url}\n\n"
         full_post = header + post_text
-
-        if relevant_agents:
-            mentions = ", ".join(f"{aid.capitalize()} lab" for aid in relevant_agents)
-            full_post += f"\n\n_Potentially relevant to: {mentions}_"
 
         if dry_run:
             logger.info("DRY RUN — would post to #%s:\n%s\n", target_channel, full_post)
@@ -402,7 +429,6 @@ async def run_grantbot(
         posted_list.append({
             "number": opp_num,
             "title": opp.get("title"),
-            "score": item.get("score"),
             "channel": target_channel,
         })
 
@@ -437,7 +463,6 @@ def _mark_run_complete() -> None:
 def main(
     channel: str = typer.Option("funding-opportunities", "--channel", help="Slack channel to post to"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview posts without sending to Slack"),
-    max_queries: int = typer.Option(30, "--max-queries", help="Max number of search queries"),
     max_posts: int = typer.Option(10, "--max-posts", help="Max opportunities to post per run"),
     max_per_channel: int = typer.Option(1, "--max-per-channel", help="Max opportunities to post per channel per run"),
 ):
@@ -445,14 +470,13 @@ def main(
     results = asyncio.run(run_grantbot(
         channel=channel,
         dry_run=dry_run,
-        max_queries=max_queries,
         max_posts=max_posts,
         max_per_channel=max_per_channel,
     ))
     if results:
         typer.echo(f"\nPosted {len(results)} opportunities:")
         for r in results:
-            typer.echo(f"  [{r['score']}/10] {r['number']}: {r['title']}")
+            typer.echo(f"  #{r['channel']}: {r['number']} — {r['title']}")
     else:
         typer.echo("No new relevant opportunities found.")
     if not dry_run:
@@ -462,7 +486,6 @@ def main(
 @app.command("scheduler")
 def scheduler(
     channel: str = typer.Option("funding-opportunities", "--channel", help="Slack channel to post to"),
-    max_queries: int = typer.Option(30, "--max-queries", help="Max number of search queries"),
     max_posts: int = typer.Option(10, "--max-posts", help="Max opportunities to post per run"),
     max_per_channel: int = typer.Option(1, "--max-per-channel", help="Max opportunities to post per channel per run"),
     run_hour: int = typer.Option(8, "--run-hour", help="UTC hour to run daily (0-23)"),
@@ -484,7 +507,6 @@ def scheduler(
             try:
                 results = asyncio.run(run_grantbot(
                     channel=channel,
-                    max_queries=max_queries,
                     max_posts=max_posts,
                     max_per_channel=max_per_channel,
                 ))
