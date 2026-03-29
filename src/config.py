@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     slack_app_token_ward: str = ""
     slack_bot_token_briney: str = ""
     slack_app_token_briney: str = ""
+    slack_bot_token_forli: str = ""
+    slack_app_token_forli: str = ""
+    slack_bot_token_deniz: str = ""
+    slack_app_token_deniz: str = ""
     slack_bot_token_grantbot: str = ""
     slack_app_token_grantbot: str = ""
 
@@ -97,6 +101,8 @@ class Settings(BaseSettings):
             "wu": {"bot": self.slack_bot_token_wu, "app": self.slack_app_token_wu},
             "ward": {"bot": self.slack_bot_token_ward, "app": self.slack_app_token_ward},
             "briney": {"bot": self.slack_bot_token_briney, "app": self.slack_app_token_briney},
+            "forli": {"bot": self.slack_bot_token_forli, "app": self.slack_app_token_forli},
+            "deniz": {"bot": self.slack_bot_token_deniz, "app": self.slack_app_token_deniz},
         }
 
 
