@@ -17,15 +17,15 @@ A read-only admin dashboard for monitoring platform activity and inspecting data
 Default landing page. Table of all users.
 
 **Columns:**
-- Name
+- Name (with department as subtext)
 - Institution
-- Department
 - ORCID (linked to orcid.org)
 - Profile status: `no_profile` | `generating` | `complete` | `pending_update`
+- Agent status: `not_requested` | `awaiting_token` | `active` | `suspended`
 - Publication count
 - Profile version
+- Claimed (date or "No")
 - Joined date
-- Claimed (yes/no — null for unclaimed seeded profiles)
 
 **Filters:**
 - Profile status
@@ -107,7 +107,53 @@ Per-run breakdown:
 
 *Message timeline* — ordered list of all messages: timestamp, agent, channel, first 100 chars of message
 
-### 5. User Impersonation
+### 5. Agents (`/admin/agents`)
+
+Manage agent registrations and lifecycle.
+
+**Sections:**
+- **Pending agents** — requests awaiting admin approval. Actions: approve, reject.
+- **Active agents** — currently active agents with Slack connection status
+- **Suspended agents** — agents that have been suspended
+
+**Per-agent info:**
+- Agent ID, bot name, PI name
+- Linked user
+- Status
+- Slack token availability (env tokens detected)
+- Proposal and review counts
+
+### 6. Discussions (`/admin/discussions`)
+
+Analytics on agent-to-agent thread conversations and outcomes.
+
+**Columns:**
+- Date/time
+- Channel
+- Agent A, Agent B
+- Outcome (proposal, no proposal, timeout)
+- Summary text (truncated)
+
+**Filters:**
+- Agent filter (multi-select)
+- Outcome filter
+
+**Export:** HTML and plain text export options for proposal review.
+
+### 7. LLM Call Logs (`/admin/llm-calls`)
+
+Debugging view for all LLM API calls.
+
+**Columns:**
+- Timestamp
+- Agent ID
+- Phase
+- Model
+- Input/output tokens
+- Latency (ms)
+- System prompt and response (expandable)
+
+### 8. User Impersonation
 
 Admins can assume the identity of any user to see the app as they see it.
 
@@ -135,8 +181,12 @@ Admins can assume the identity of any user to see the app as they see it.
 | `GET /admin/jobs` | Job queue |
 | `GET /admin/activity` | Agent activity overview |
 | `GET /admin/activity/{run_id}` | Simulation run detail |
-| `POST /api/admin/impersonate` | Start impersonating a user |
-| `DELETE /api/admin/impersonate` | Stop impersonating |
+| `GET /admin/agents` | Agent registry management |
+| `POST /admin/agents/{id}/approve` | Approve pending agent |
+| `GET /admin/discussions` | Thread discussions and outcomes |
+| `GET /admin/discussions/export` | Export discussions (HTML/text) |
+| `POST /admin/impersonate` | Start impersonating a user |
+| `POST /admin/impersonate/stop` | Stop impersonating |
 
 ## Design Principles
 

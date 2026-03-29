@@ -123,3 +123,14 @@ python -m src.cli seed-profiles --file orcids.txt
 python -m src.cli admin:grant --orcid 0000-0002-1825-0097
 python -m src.cli admin:revoke --orcid 0000-0002-1825-0097
 ```
+
+### Admin Impersonation
+
+Admins can view the app as any user for testing and debugging. See `admin-dashboard.md` for the full impersonation flow.
+
+- `POST /admin/impersonate` with an ORCID — sets `copi-impersonate` cookie
+- Auto-creates unclaimed users for ORCIDs not yet in the system
+- `get_current_user` dependency checks the cookie and returns the impersonated user
+- Impersonated user's profile is eagerly loaded to prevent async lazy-load errors
+- Agent badge in nav shows the impersonated user's notification count
+- 24-hour cookie expiry

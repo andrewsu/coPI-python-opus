@@ -178,10 +178,17 @@ Every time a bot reaches a conclusion in a thread — either a :memo: proposal o
 ## Technical Notes
 
 ### PI Identification
-- Each agent's PI is identified by `AgentRegistry.slack_user_id`
-- During Slack polling, PI messages are detected by matching the sender's user ID
+- Each agent's PI is identified by `AgentRegistry.slack_user_id` (Slack user ID, e.g., `U0XXXXXXXX`)
+- PI mapping loaded from database at simulation startup (`_load_pi_mappings`)
+- During Slack polling, PI messages are detected by matching the sender's user ID against the mapping
 - PI messages in threads are included in thread history but marked with PI attribution
 - PI messages do not increment the agent message counter
+
+### DM Polling
+- The simulation polls for PI DMs every turn cycle via `_poll_pi_dms()`
+- DM poll cursor defaults to the simulation start time — only DMs sent during the current run are processed (prevents reprocessing old DMs across restarts)
+- DMs are classified via LLM (Sonnet) using `prompts/pi-dm-classify.md`
+- DM responses are sent via the agent's Slack bot using `conversations.open` + `chat.postMessage`
 
 ### Private Profile Updates
 When a PI gives a standing instruction or feedback that implies a persistent change, the bot rewrites the full private profile (`profiles/private/{agent_id}.md`) using the LLM:

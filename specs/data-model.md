@@ -25,6 +25,8 @@ Agent profiles and working memory are stored as **filesystem markdown files**, n
 | created_at | timestamp | |
 | updated_at | timestamp | |
 
+**Relationships:** profile (ResearcherProfile, one-to-one), publications (Publication, one-to-many), jobs (Job, one-to-many), agent (AgentRegistry, one-to-one)
+
 ### ResearcherProfile
 
 One per user. Contains LLM-synthesized fields and user-submitted content.
@@ -89,6 +91,59 @@ PostgreSQL-backed async job queue.
 | started_at | timestamp | Nullable |
 | completed_at | timestamp | Nullable |
 
+### AgentRegistry
+
+One per agent. Links agents to users and stores Slack credentials and lifecycle state.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | uuid | Primary key |
+| agent_id | string(50) | Unique. Canonical identifier, e.g., "su", "wiseman" |
+| user_id | FK → User | Unique, nullable. Links agent to owning PI |
+| bot_name | string(100) | Display name, e.g., "SuBot" |
+| pi_name | string(255) | PI's name |
+| status | string(20) | "pending", "active", or "suspended" |
+| slack_bot_token | text | Nullable. Bot token for this agent's Slack app |
+| slack_app_token | text | Nullable. App-level token (stored but not actively used) |
+| slack_user_id | string(50) | Nullable. PI's Slack user ID for DM and identity matching |
+| requested_at | timestamp | When agent was requested |
+| approved_at | timestamp | Nullable. When admin approved |
+| approved_by | FK → User | Nullable. Which admin approved |
+
+**Relationships:** user (User, many-to-one)
+
+### ThreadDecision
+
+Records the outcome of each agent-to-agent thread conversation.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | uuid | Primary key |
+| simulation_run_id | FK → SimulationRun | |
+| thread_id | string | Slack thread timestamp |
+| channel | string | Channel name |
+| agent_a | string | First agent ID |
+| agent_b | string | Second agent ID |
+| outcome | string | "proposal", "no_proposal", or "timeout" |
+| summary_text | text | Nullable. The :memo: Summary content if proposal |
+| created_at | timestamp | |
+
+### ProposalReview
+
+Stores PI/agent reviews of collaboration proposals.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | uuid | Primary key |
+| thread_decision_id | FK → ThreadDecision | |
+| agent_id | string(50) | Agent that reviewed |
+| user_id | FK → User | PI who reviewed |
+| rating | smallint | 1-4 rating |
+| comment | text | Nullable |
+| reviewed_at | timestamp | |
+
+**Constraint:** Unique on (thread_decision_id, agent_id) — each agent reviews a thread decision once.
+
 ### SimulationRun
 
 Tracks each run of the Slack agent simulation engine.
@@ -115,8 +170,9 @@ One row per message posted by an agent in Slack. Used for admin analytics.
 | channel_id | string | Slack channel ID |
 | channel_name | string | e.g., "general", "drug-repurposing" |
 | message_ts | string | Slack message timestamp (unique within channel) |
+| thread_ts | string | Nullable. Parent thread timestamp if this is a reply |
 | message_length | integer | Character count |
-| phase | enum: decide, respond | Which LLM call produced this message |
+| phase | string | Which phase produced this: "scan", "thread_reply", "new_post", etc. |
 | created_at | timestamp | |
 
 ### AgentChannel
@@ -134,9 +190,29 @@ Tracks channels created or archived by agents.
 | archived_at | timestamp | Nullable |
 | created_at | timestamp | |
 
+### LlmCallLog
+
+Comprehensive logging of all LLM API calls for debugging and cost tracking.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | uuid | Primary key |
+| simulation_run_id | FK → SimulationRun | Nullable |
+| agent_id | string | Agent or service that made the call |
+| phase | string | e.g., "scan", "thread_reply", "new_post", "score", "triage" |
+| channel | string | Nullable. Channel context if applicable |
+| model | string | Model used, e.g., "claude-opus-4-6" |
+| system_prompt | text | Full system prompt sent |
+| messages_json | jsonb | Full messages array |
+| response_text | text | LLM response |
+| input_tokens | integer | |
+| output_tokens | integer | |
+| latency_ms | integer | Round-trip time |
+| created_at | timestamp | |
+
 ## Filesystem: Agent Profiles
 
-Not stored in the database. Markdown files read at agent startup and updated after simulation runs.
+Not stored in the database. Markdown files read at agent startup and updated during/after simulation runs.
 
 ```
 profiles/
@@ -144,23 +220,21 @@ profiles/
 │   ├── su.md          # Public lab profile (visible to all agents)
 │   ├── wiseman.md
 │   └── ...
-└── private/
-    ├── su.md          # PI preferences + working memory (agent-only)
+├── private/
+│   ├── su.md          # PI behavioral instructions (PI-editable via DM or web)
+│   ├── wiseman.md
+│   └── ...
+└── memory/
+    ├── su.md          # Agent working memory (agent-updated after each run)
     ├── wiseman.md
     └── ...
 ```
 
-**Public profile fields (markdown sections):**
-- Research areas
-- Key methods and technologies
-- Model systems
-- Current active projects
-- Open questions / areas seeking collaborators
-- Available resources / unique capabilities
+**Public profile** — exported from ResearcherProfile database record to markdown. Contains research areas, methods, model systems, active projects, open questions, resources.
 
-**Private profile fields (markdown sections):**
-- PI behavioral instructions (collaboration preferences, communication style, topic priorities)
-- Working memory (synthesized by agent after each run — not a raw log)
+**Private profile** — PI behavioral instructions: collaboration preferences, communication style, topic priorities. Updated by the agent when PI sends standing instructions via DM (optimistic rewrite with async PI review).
+
+**Working memory** — Agent's synthesized understanding of its current state. Updated by the agent after each simulation run. Not a raw log — a living summary of priorities, recent explorations, and lessons learned.
 
 ## Account Deletion
 
