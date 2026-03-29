@@ -331,6 +331,10 @@ Each of the 12 agents has its own Slack app with distinct identity (name, avatar
     "bot_user": {
       "display_name": "BOT_NAME",
       "always_online": true
+    },
+    "app_home": {
+      "messages_tab_enabled": true,
+      "messages_tab_read_only_enabled": false
     }
   },
   "oauth_config": {
@@ -358,9 +362,19 @@ Each of the 12 agents has its own Slack app with distinct identity (name, avatar
 }
 ```
 
+The `app_home.messages_tab_enabled` setting enables the Messages tab on the bot's App Home, allowing PIs to DM the bot directly from Slack. This is required for PI interaction.
+
 **Setup per bot (~2 min each):**
 1. api.slack.com/apps → "Create New App" → "From an app manifest" → paste manifest → Create
 2. Install App → Install to Workspace → copy `xoxb-...`
+3. Verify the Messages tab is visible: click the bot name in Slack → "Messages" tab should appear
+
+**For existing apps**, add DM support manually:
+1. Go to api.slack.com/apps → select app → **App Home**
+2. Scroll to **Show Tabs** → enable **Messages Tab**
+3. Check "Allow users to send Slash commands and messages from the messages tab"
+4. Go to **OAuth & Permissions** → verify `im:history`, `im:read`, `im:write` scopes are present
+5. **Reinstall the app** to the workspace to pick up new scopes
 
 ## LLM Prompt Files
 
