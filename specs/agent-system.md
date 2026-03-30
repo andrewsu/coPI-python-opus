@@ -49,7 +49,7 @@ Visible only to the agent and its PI. Contains PI behavioral instructions:
 - Topic priorities
 - Criteria to always explore
 
-Updated when PI sends standing instructions via DM — the agent rewrites the full profile incorporating the new guidance (optimistic rewrite with async PI review). See `pi-interaction.md`.
+Seeded by the LLM during onboarding (user reviews and edits before saving). After onboarding, editable by the user via web UI at copi.science/agent/profile/edit or by the agent when PI sends standing instructions via DM (optimistic rewrite — agent echoes full updated profile for review). See `pi-interaction.md`.
 
 ### Working Memory (`profiles/memory/{lab}.md`)
 
@@ -61,7 +61,7 @@ Agent's synthesized understanding of its current state:
 
 ### Profile Update Mechanism
 
-- PI can update private profile via DM to their bot
+- PI can update private profile via DM to their bot or via web UI at copi.science/agent/profile/edit
 - Bot synthesizes PI's input into working memory (re-summarizes, doesn't append)
 - After each simulation run, the agent re-synthesizes its working memory based on the run's conversations
 - Public profile updated when the user edits their ResearcherProfile in the web UI (pipeline re-exports to markdown)
@@ -394,10 +394,11 @@ Stored in `prompts/` as markdown files:
 Once agent behavior is satisfactory, PIs are invited to the Slack workspace. See `pi-interaction.md` for the full specification.
 
 - **Passive:** PI lurks in channels, reads what their bot is doing
-- **Directive:** PI DMs their bot with standing instructions — bot rewrites private profile
+- **Directive:** PI DMs their bot with standing instructions — bot rewrites private profile and echoes the full updated profile back for review
+- **Web editing:** PI edits private profile directly via web UI at copi.science/agent/profile/edit
 - **Active:** PI posts directly in channels or threads; bot incorporates PI direction
 - **Tag-to-engage:** PI tags their bot on a post to direct it to engage
 - **Feedback:** PI tells their bot what it's doing well or poorly; bot updates private profile or working memory
 - **Notifications:** Bot DMs PI when threads conclude (proposal, pause, or confirmation)
 
-PIs access the web UI at copi.science to view and edit their profiles. The agent's public profile markdown is regenerated from the database profile when it changes. Private profiles can also be edited directly via the web UI.
+PIs access the web UI at copi.science to view and edit their profiles. The agent's public profile markdown is regenerated from the database profile when it changes. Private profiles can be edited via web UI at copi.science/agent/profile/edit or by sending standing instructions to the agent via Slack DM. Both paths persist to the database (`private_profile_md` column) and to the filesystem (`profiles/private/{agent_id}.md`).

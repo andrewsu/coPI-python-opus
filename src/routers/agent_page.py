@@ -16,9 +16,11 @@ from src.models import (
     AgentMessage,
     AgentRegistry,
     ProposalReview,
+    ResearcherProfile,
     ThreadDecision,
     User,
 )
+from src.services.profile_export import export_private_profile
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -340,7 +342,7 @@ async def save_private_profile(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Save private profile to disk."""
+    """Save private profile to disk and database."""
     agent_result = await db.execute(
         select(AgentRegistry).where(AgentRegistry.user_id == current_user.id)
     )
@@ -348,9 +350,19 @@ async def save_private_profile(
     if not agent or agent.status != "active":
         return RedirectResponse(url="/agent", status_code=302)
 
+    # Write to disk
     profile_path = PROFILES_DIR / "private" / f"{agent.agent_id}.md"
     profile_path.parent.mkdir(parents=True, exist_ok=True)
     profile_path.write_text(content)
+
+    # Persist to DB
+    profile_result = await db.execute(
+        select(ResearcherProfile).where(ResearcherProfile.user_id == current_user.id)
+    )
+    profile = profile_result.scalar_one_or_none()
+    if profile:
+        profile.private_profile_md = content.strip() or None
+        await db.commit()
 
     return RedirectResponse(url="/agent/profile", status_code=302)
 

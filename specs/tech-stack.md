@@ -32,7 +32,8 @@ CoPI is a Python web application deployed via Docker Compose. PostgreSQL for str
 - **ORM:** SQLAlchemy 2.0 async with asyncpg driver
 - Stores: users, researcher profiles, publications, job queue, agent activity logs, agent registry, thread decisions, proposal reviews, LLM call logs
 - Array fields stored as Postgres ARRAY columns
-- JSONB for `user_submitted_texts`, `pending_profile`, and job `payload`
+- JSONB for `pending_profile` and job `payload`
+- `private_profile_md` and `private_profile_seed` are text columns (not JSONB)
 
 ## Filesystem
 

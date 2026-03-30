@@ -110,13 +110,24 @@ class PIHandler:
             if profile_match:
                 new_profile = profile_match.group(1).strip()
                 agent.update_private_profile(new_profile)
+
+                # Persist to DB
+                if self.session_factory:
+                    try:
+                        async with self.session_factory() as db:
+                            await agent.persist_private_profile_to_db(db)
+                    except Exception as db_exc:
+                        logger.error("[%s] DB persist failed: %s", agent_id, db_exc)
+
                 changes = changes_match.group(1).strip() if changes_match else "Profile updated."
 
                 confirmation = (
                     f"I've updated my private profile to reflect your instruction. "
                     f"Here's what changed: {changes}\n\n"
-                    f"Let me know if anything looks off, or you can edit the profile "
-                    f"directly at copi.science."
+                    f"Here's my full updated profile:\n\n"
+                    f"```\n{new_profile}\n```\n\n"
+                    f"Reply with further instructions to refine, or edit directly "
+                    f"at copi.science/agent/profile/edit."
                 )
                 await self._send_dm(agent_id, pi_slack_id, confirmation)
                 logger.info("[%s] Private profile rewritten per PI instruction", agent_id)

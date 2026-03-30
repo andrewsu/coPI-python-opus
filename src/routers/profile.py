@@ -1,7 +1,6 @@
 """Profile view and edit router."""
 
 import logging
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -158,93 +157,6 @@ async def profile_refresh(
     db.add(job)
     await db.commit()
     return RedirectResponse(url="/profile?refreshing=1", status_code=302)
-
-
-@router.get("/add-text", response_class=HTMLResponse)
-async def add_text_page(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Page to add a user-submitted text block."""
-    profile_result = await db.execute(
-        select(ResearcherProfile).where(ResearcherProfile.user_id == current_user.id)
-    )
-    profile = profile_result.scalar_one_or_none()
-
-    return templates.TemplateResponse(
-        request,
-        "profile/add_text.html",
-        _template_context(request, current_user, profile=profile),
-    )
-
-
-@router.post("/add-text")
-async def add_text_submit(
-    request: Request,
-    label: str = Form(...),
-    content: str = Form(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Submit a new user text block."""
-    profile_result = await db.execute(
-        select(ResearcherProfile).where(ResearcherProfile.user_id == current_user.id)
-    )
-    profile = profile_result.scalar_one_or_none()
-    if not profile:
-        profile = ResearcherProfile(user_id=current_user.id)
-        db.add(profile)
-
-    texts = list(profile.user_submitted_texts or [])
-    if len(texts) >= 5:
-        return RedirectResponse(url="/profile/edit?error=max_texts", status_code=302)
-
-    # Cap content at 2000 words
-    words = content.split()
-    if len(words) > 2000:
-        content = " ".join(words[:2000])
-
-    texts.append({
-        "label": label[:100],
-        "content": content,
-        "submitted_at": datetime.now(timezone.utc).isoformat(),
-    })
-    profile.user_submitted_texts = texts
-
-    # Enqueue re-synthesis job
-    job = Job(
-        type="generate_profile",
-        user_id=current_user.id,
-        payload={
-            "user_id": str(current_user.id),
-            "orcid": current_user.orcid,
-            "reason": "user_text_added",
-        },
-    )
-    db.add(job)
-    await db.commit()
-    return RedirectResponse(url="/profile/edit?text_added=1", status_code=302)
-
-
-@router.get("/delete-text/{index}")
-async def delete_text(
-    index: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Delete a user-submitted text block by index."""
-    profile_result = await db.execute(
-        select(ResearcherProfile).where(ResearcherProfile.user_id == current_user.id)
-    )
-    profile = profile_result.scalar_one_or_none()
-    if profile and profile.user_submitted_texts:
-        texts = list(profile.user_submitted_texts)
-        if 0 <= index < len(texts):
-            texts.pop(index)
-            profile.user_submitted_texts = texts
-            await db.commit()
-    return RedirectResponse(url="/profile/edit", status_code=302)
 
 
 @router.get("/delete-account", response_class=HTMLResponse)

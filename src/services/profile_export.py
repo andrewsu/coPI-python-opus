@@ -9,6 +9,7 @@ from src.models import Publication, ResearcherProfile, User
 logger = logging.getLogger(__name__)
 
 PROFILES_DIR = Path("profiles/public")
+PRIVATE_PROFILES_DIR = Path("profiles/private")
 
 # Map ORCID → agent ID for pilot labs
 ORCID_TO_AGENT_ID = {
@@ -137,6 +138,28 @@ def export_profile_to_markdown(
         return path
     except Exception as exc:
         logger.error("Failed to export profile for %s: %s", user.name, exc)
+        return None
+
+
+def export_private_profile(user: User, profile: ResearcherProfile) -> Path | None:
+    """Export private_profile_md to profiles/private/{agent_id}.md.
+
+    Returns the path written, or None if the user isn't a pilot lab or has no content.
+    """
+    agent_id = ORCID_TO_AGENT_ID.get(user.orcid)
+    if not agent_id:
+        return None
+    if not profile.private_profile_md:
+        return None
+
+    path = PRIVATE_PROFILES_DIR / f"{agent_id}.md"
+    try:
+        PRIVATE_PROFILES_DIR.mkdir(parents=True, exist_ok=True)
+        path.write_text(profile.private_profile_md + "\n", encoding="utf-8")
+        logger.info("Exported private profile for %s to %s", user.name, path)
+        return path
+    except Exception as exc:
+        logger.error("Failed to export private profile for %s: %s", user.name, exc)
         return None
 
 

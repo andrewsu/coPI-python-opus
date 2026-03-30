@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_db
 from src.dependencies import get_current_user
 from src.models import Job, ResearcherProfile, User
+from src.services.profile_export import export_private_profile
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -110,16 +111,16 @@ async def save_profile(
     from src.services.profile_export import export_profile_to_markdown
     export_profile_to_markdown(current_user, profile)
 
-    return RedirectResponse(url="/onboarding/add-texts", status_code=302)
+    return RedirectResponse(url="/onboarding/private-profile", status_code=302)
 
 
-@router.get("/add-texts", response_class=HTMLResponse)
-async def add_texts(
+@router.get("/private-profile", response_class=HTMLResponse)
+async def private_profile(
     request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Step 4: add user-submitted texts."""
+    """Step 4: review and edit seeded private profile."""
     if current_user.onboarding_complete:
         return RedirectResponse(url="/profile", status_code=302)
 
@@ -128,11 +129,46 @@ async def add_texts(
     )
     profile = profile_result.scalar_one_or_none()
 
+    # Show the seed if user hasn't saved a live profile yet
+    content = ""
+    if profile:
+        content = profile.private_profile_md or profile.private_profile_seed or ""
+
     return templates.TemplateResponse(
         request,
-        "onboarding/add_texts.html",
-        _template_context(request, current_user, profile=profile),
+        "onboarding/private_profile.html",
+        _template_context(request, current_user, profile=profile, profile_content=content),
     )
+
+
+@router.post("/private-profile")
+async def save_private_profile(
+    request: Request,
+    content: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Save the private profile from onboarding step 4."""
+    profile_result = await db.execute(
+        select(ResearcherProfile).where(ResearcherProfile.user_id == current_user.id)
+    )
+    profile = profile_result.scalar_one_or_none()
+    if not profile:
+        profile = ResearcherProfile(user_id=current_user.id)
+        db.add(profile)
+
+    profile.private_profile_md = content.strip() or None
+    profile.private_profile_seed = None  # Clear seed after user saves
+
+    # Mark onboarding complete
+    current_user.onboarding_complete = True
+
+    await db.commit()
+
+    # Export to disk
+    export_private_profile(current_user, profile)
+
+    return RedirectResponse(url="/profile?onboarding_complete=1", status_code=302)
 
 
 @router.post("/complete")

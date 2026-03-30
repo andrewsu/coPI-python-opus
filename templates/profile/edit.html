@@ -104,33 +104,6 @@
         </div>
         {% endif %}
 
-        <!-- User-submitted texts -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-            <h2 class="text-lg font-semibold text-gray-800 mb-2">Supplementary Information</h2>
-            <p class="text-sm text-gray-500 mb-4">
-                Add up to 5 text blocks (grant aims, equipment access, current interests).
-                These inform your profile synthesis but are never shown to others.
-            </p>
-
-            {% if profile and profile.user_submitted_texts %}
-            {% for text_entry in profile.user_submitted_texts %}
-            <div class="border border-gray-200 rounded-lg p-4 mb-3">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-gray-700">{{ text_entry.label }}</span>
-                    <a href="/profile/delete-text/{{ loop.index0 }}" class="text-xs text-red-500 hover:text-red-700">Remove</a>
-                </div>
-                <p class="text-xs text-gray-600 line-clamp-3">{{ text_entry.content[:200] }}{% if text_entry.content | length > 200 %}...{% endif %}</p>
-            </div>
-            {% endfor %}
-            {% endif %}
-
-            {% if not profile or not profile.user_submitted_texts or profile.user_submitted_texts | length < 5 %}
-            <a href="/profile/add-text" class="text-sm text-indigo-600 hover:text-indigo-700">
-                + Add supplementary text
-            </a>
-            {% endif %}
-        </div>
-
         <div class="flex gap-3">
             <button type="submit"
                     class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 font-medium">
@@ -142,6 +115,19 @@
             </a>
         </div>
     </form>
+
+    <!-- Agent instructions -->
+    <div class="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-2">Agent Instructions</h2>
+        <p class="text-sm text-gray-500 mb-4">
+            Your agent's private behavioral profile controls how it pursues collaborations,
+            what topics it prioritizes, and how it communicates on your behalf.
+        </p>
+        <a href="/agent/profile/edit"
+           class="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+            Edit agent instructions →
+        </a>
+    </div>
 
     <!-- Danger zone -->
     <div class="mt-12 border border-red-200 rounded-xl p-6">

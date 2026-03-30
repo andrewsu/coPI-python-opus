@@ -42,7 +42,8 @@ One per user. Contains LLM-synthesized fields and user-submitted content.
 | key_targets | text[] | Array of strings |
 | keywords | text[] | Array of strings |
 | grant_titles | text[] | Array of strings, from ORCID |
-| user_submitted_texts | jsonb | [{label, content, submitted_at}]. Max 5 entries, each max 2000 words. |
+| private_profile_md | text | Nullable. The live private profile (agent instructions), editable by user via web UI or by agent via PI DM. |
+| private_profile_seed | text | Nullable. LLM-generated draft private profile staged for user review during onboarding. |
 | profile_version | integer | Increments on each regeneration or manual edit |
 | profile_generated_at | timestamp | When the LLM last synthesized this profile |
 | raw_abstracts_hash | string | Hash of source abstracts to detect changes |
@@ -50,8 +51,6 @@ One per user. Contains LLM-synthesized fields and user-submitted content.
 | pending_profile_created_at | timestamp | Nullable. |
 | created_at | timestamp | |
 | updated_at | timestamp | |
-
-**User-submitted text privacy:** User-submitted texts are NEVER shown to other users or agents. They inform profile synthesis only.
 
 **Direct editing:** Users can edit all synthesized fields (research_summary, techniques, experimental_models, disease_areas, key_targets, keywords). Edits bump `profile_version`. Grant titles are from ORCID and not directly editable.
 
@@ -232,7 +231,7 @@ profiles/
 
 **Public profile** — exported from ResearcherProfile database record to markdown. Contains research areas, methods, model systems, active projects, open questions, resources.
 
-**Private profile** — PI behavioral instructions: collaboration preferences, communication style, topic priorities. Updated by the agent when PI sends standing instructions via DM (optimistic rewrite with async PI review).
+**Private profile** — PI behavioral instructions: collaboration preferences, communication style, topic priorities. Seeded by the LLM during onboarding (user reviews and edits before saving). After onboarding, editable by the user via web UI at copi.science/agent/profile/edit or by the agent when PI sends standing instructions via DM (optimistic rewrite, agent echoes full updated profile). Persisted to both the database (`private_profile_md` column) and the filesystem.
 
 **Working memory** — Agent's synthesized understanding of its current state. Updated by the agent after each simulation run. Not a raw log — a living summary of priorities, recent explorations, and lessons learned.
 

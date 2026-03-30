@@ -300,7 +300,10 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
             logger.error("[%s] Failed to update working memory: %s", self.agent_id, exc)
 
     def update_private_profile(self, new_profile: str) -> None:
-        """Write private profile to profiles/private/{agent_id}.md."""
+        """Write private profile to profiles/private/{agent_id}.md (disk only).
+
+        For DB persistence, call persist_private_profile_to_db() afterward.
+        """
         profile_path = PROFILES_DIR / "private" / f"{self.agent_id}.md"
         try:
             profile_path.parent.mkdir(parents=True, exist_ok=True)
@@ -308,6 +311,30 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
             self._private_profile = None  # Invalidate cache
         except Exception as exc:
             logger.error("[%s] Failed to update private profile: %s", self.agent_id, exc)
+
+    async def persist_private_profile_to_db(self, db: "AsyncSession") -> None:
+        """Sync the on-disk private profile to the database."""
+        from sqlalchemy import select
+        from src.models import AgentRegistry, ResearcherProfile
+
+        try:
+            agent_result = await db.execute(
+                select(AgentRegistry).where(AgentRegistry.agent_id == self.agent_id)
+            )
+            agent_reg = agent_result.scalar_one_or_none()
+            if not agent_reg:
+                return
+            profile_result = await db.execute(
+                select(ResearcherProfile).where(
+                    ResearcherProfile.user_id == agent_reg.user_id
+                )
+            )
+            profile = profile_result.scalar_one_or_none()
+            if profile:
+                profile.private_profile_md = self.private_profile
+                await db.commit()
+        except Exception as exc:
+            logger.error("[%s] Failed to persist private profile to DB: %s", self.agent_id, exc)
 
     # ------------------------------------------------------------------
     # Helpers
