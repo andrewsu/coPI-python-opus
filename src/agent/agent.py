@@ -101,6 +101,54 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
 {self.working_memory if self.working_memory else "*No working memory yet — this is your first simulation.*"}
 {lab_directory_section}"""
 
+    def build_scan_system_prompt(self) -> str:
+        """Build a lightweight system prompt for scan/filter phases.
+
+        Omits working memory and lab directory — scan only needs identity,
+        research focus, and private priorities to judge relevance.
+        """
+        base_prompt = self._load_file(
+            PROMPTS_DIR / "agent-system.md",
+            _default_system_prompt(),
+        )
+        return f"""{base_prompt}
+
+## Your Identity
+You are **{self.bot_name}**, the AI agent representing the {self.pi_name} lab at Scripps Research.
+Your agent ID is "{self.agent_id}". When communicating, represent your lab professionally.
+
+## Your Lab Profile (Public)
+{self.public_profile}
+
+## Your Private Instructions
+{self.private_profile}"""
+
+    def build_thread_reply_system_prompt(self) -> str:
+        """Build a system prompt for thread replies.
+
+        Omits lab directory — by mid-conversation you already know who you're
+        talking to. Use retrieve_profile tool if you need details on another lab.
+        Includes working memory since it may contain thread-relevant context.
+        """
+        base_prompt = self._load_file(
+            PROMPTS_DIR / "agent-system.md",
+            _default_system_prompt(),
+        )
+        return f"""{base_prompt}
+
+## Your Identity
+You are **{self.bot_name}**, the AI agent representing the {self.pi_name} lab at Scripps Research.
+Your agent ID is "{self.agent_id}". When communicating, represent your lab professionally.
+
+## Your Lab Profile (Public)
+{self.public_profile}
+
+## Your Private Instructions
+{self.private_profile}
+
+## Your Working Memory
+{self.working_memory if self.working_memory else "*No working memory yet — this is your first simulation.*"}"""
+
     # ------------------------------------------------------------------
     # Phase 2: Scan & Filter prompt
     # ------------------------------------------------------------------
@@ -112,7 +160,7 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
         new_posts: list of {post_id, channel, sender, content_snippet}
         Returns (system_prompt, messages).
         """
-        system_prompt = self.build_system_prompt()
+        system_prompt = self.build_scan_system_prompt()
         phase2_template = self._load_file(
             PROMPTS_DIR / "phase2-scan-filter.md",
             "Evaluate posts and return JSON with selected_post_ids.",
@@ -130,7 +178,7 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
 
     def build_phase2_prune_prompt(self) -> tuple[str, list[dict]]:
         """Build system + messages for Phase 2 prune."""
-        system_prompt = self.build_system_prompt()
+        system_prompt = self.build_scan_system_prompt()
         prune_template = self._load_file(
             PROMPTS_DIR / "phase2-prune.md",
             "Prune interesting_posts to ≤20. Return JSON with keep_post_ids.",
@@ -162,7 +210,7 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
         thread_history: list of {sender, content} dicts.
         Returns (system_prompt, messages).
         """
-        system_prompt = self.build_system_prompt()
+        system_prompt = self.build_thread_reply_system_prompt()
         phase4_template = self._load_file(
             PROMPTS_DIR / "phase4-thread-reply.md",
             "Compose a thread reply.",
