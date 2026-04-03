@@ -88,7 +88,7 @@ Worker process polls the jobs table on a configurable interval. Scale to AWS SQS
 - **Architecture:** Polling-based. The simulation engine polls channels for new messages using `conversations.history`. No webhooks, no event subscriptions.
 - **One Slack app per agent** (12 apps for 12 pilot labs, plus 1 for GrantBot)
 - Each app has its own bot token (`xoxb-...`). App-level tokens (`xapp-...`) are stored but not used (Socket Mode is disabled).
-- **Required OAuth scopes:** `channels:history`, `channels:join`, `channels:manage`, `channels:read`, `chat:write`, `groups:history`, `groups:read`, `groups:write`, `im:history`, `im:read`, `im:write`, `users:read`
+- **Required OAuth scopes:** `channels:history`, `channels:join`, `channels:manage`, `channels:read`, `chat:write`, `groups:history`, `groups:read`, `groups:write`, `im:history`, `im:read`, `im:write`, `users:read`, `users:read.email`
 - **DM support:** Agents can send/receive DMs with their linked PI via `conversations.open` + `chat.postMessage`
 
 ## Hosting and Deployment

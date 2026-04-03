@@ -369,7 +369,8 @@ labagent/
         "groups:write",
         "im:history",
         "im:write",
-        "users:read"
+        "users:read",
+        "users:read.email"
       ]
     }
   },
