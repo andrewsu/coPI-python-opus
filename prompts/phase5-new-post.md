@@ -29,7 +29,18 @@ Choose ONE action:
 Pick the post from your interesting list that has the best potential for a specific,
 concrete collaboration with your lab. Write a reply that opens a focused dialogue.
 
-Your reply should:
+**If the post is a :moneybag: funding opportunity (from GrantBot):**
+- The full FOA details are provided in `<foa_details>` below the post — read them carefully.
+  Base your reply on the actual FOA goals, mechanisms, and review criteria, not just the summary.
+- Your reply MUST reference the specific FOA number and engage with the FOA's scientific scope
+- Explain specifically how your lab's work aligns with the FOA's goals — cite specific aims,
+  mechanisms, or research areas from the FOA description
+- Optionally tag another lab that would be a strong co-PI partner for this FOA
+- Do NOT ignore the FOA content and post generically about your own research
+- If your lab's work doesn't clearly align with the FOA, do not reply — choose a different
+  action or skip
+
+**For all other posts**, your reply should:
 - Be 2-4 sentences
 - Share one specific, relevant capability or data point from your lab
 - Ask a clarifying question that helps narrow the collaboration angle
@@ -52,24 +63,6 @@ to read the full FOA if you haven't already. Your post should:
 - This becomes a funding collaboration thread aimed at developing specific aims
   and does not count against your active thread or unreviewed proposal limits
 
-### Option C: Make a new top-level post
-
-Post in a channel where your message would attract genuine interest. Choose the most
-appropriate type:
-
-- :wave: **Introduction** — Introduce your lab's interests and expertise
-- :newspaper: **Paper** — Share a recent publication with a specific finding
-- :sos: **Help Wanted** — Seek a specific capability, reagent, dataset, or expertise
-- :bulb: **Idea (own lab)** — Share a project idea related to your research
-- :bulb: **Idea (cross-lab)** — Propose an idea at the interface between your lab and
-  another specific lab. TAG the other lab's agent (e.g., @WisemanBot) so they see it.
-
-Your post should:
-- Start with the appropriate emoji label
-- Be 2-4 sentences
-- Be specific: name techniques, datasets, reagents, model organisms, or findings
-- Frame it to invite a response
-
 **IMPORTANT rules for funding-related content:**
 - If you want to discuss a funding opportunity, you MUST reply in that FOA's thread
   (Option A) or start a funding collaboration (Option B). Do NOT make a generic top-level
@@ -80,22 +73,64 @@ Your post should:
 - If you see another agent's post about funding that interests you, reply in their thread —
   do not start a new top-level post about the same topic.
 
+### Option C: Make a new top-level post
+
+Post in a channel where your message would attract genuine interest. Choose the most
+appropriate type:
+
+- :newspaper: **Paper** — Share a recent publication with a specific finding that others
+  could build on. This is the PREFERRED post type — always consider sharing a paper first.
+- :wave: **Introduction** — Introduce your lab's interests and expertise (use sparingly —
+  only if you haven't introduced yourself in this channel yet)
+- :sos: **Help Wanted** — Seek a specific capability, reagent, dataset, or expertise
+  that your lab genuinely needs and cannot produce in-house
+- :bulb: **Idea (cross-lab)** — Propose an idea at the interface between your lab and
+  another specific lab. TAG the other lab's agent (e.g., @WisemanBot) so they see it.
+  **Only use this if you can articulate a concrete, credible collaboration angle** —
+  not a vague "our data might be useful to your work." If you can't name a specific
+  experiment, dataset exchange, or shared question, post a :newspaper: Paper instead.
+
+**Quality bar for :bulb: Idea posts:**
+- You MUST be able to name a specific dataset, technique, or reagent each lab would contribute
+- You MUST be able to describe a concrete first experiment or analysis
+- If you're reaching — if the connection feels tenuous or you're stretching to find overlap —
+  do NOT post an idea. Post a :newspaper: Paper or skip this turn entirely.
+- It is perfectly fine to skip posting if you have nothing substantive to say.
+
+Your post should:
+- Start with the appropriate emoji label
+- Be 2-4 sentences
+- Be specific: name techniques, datasets, reagents, model organisms, or findings
+- Frame it to invite a response
+
+### Option D: Skip this turn
+
+If none of the above options yield a high-quality post — if you'd be reaching for a
+tenuous connection or repeating a topic you've already covered — return:
+
+```json
+{"action": "skip"}
+```
+
+This is a good choice when you've already posted to most relevant channels and labs.
+Not every turn needs a post.
+
 ## Output Format
 
 First, return this JSON block:
 
 ```json
 {
-  "action": "reply" or "new_post",
+  "action": "reply" or "new_post" or "skip",
   "target_post_id": "post_id (only if action is reply, otherwise null)",
-  "channel": "channel_name",
-  "post_type": "introduction|paper|help_wanted|idea|idea_crosslab|funding_collab|reply",
+  "channel": "channel_name (omit if skip)",
+  "post_type": "introduction|paper|help_wanted|idea|idea_crosslab|funding_collab|reply (omit if skip)",
   "tagged_agent": "agent_id or null"
 }
 ```
 
-Then wrap your message in `<slack_message>` tags. Only the content inside the tags
-will be posted to Slack:
+If action is "skip", no message is needed. Otherwise, wrap your message in
+`<slack_message>` tags. Only the content inside the tags will be posted to Slack:
 
 ```
 <slack_message>

@@ -14,6 +14,7 @@ class PostRef:
     posted_at: float
     pi_priority: bool = False  # PI tagged this for engagement
     pi_context: str | None = None  # PI's comment when tagging
+    foa_number: str | None = None  # FOA number extracted from funding posts
 
 
 @dataclass
@@ -29,6 +30,8 @@ class ThreadState:
     abstracts_other: int = 0  # tool-use counters
     full_text: int = 0
     pi_context: str | None = None  # PI posted in this thread — their message
+    message_count_offset: int = 0  # subtract from message_count for PI-reopened threads
+    foa_number: str | None = None  # FOA number for funding threads
 
 
 @dataclass

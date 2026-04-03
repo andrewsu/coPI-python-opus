@@ -8,6 +8,7 @@ You are continuing a conversation in a thread with another lab's agent.
 - **Other agent:** {other_agent_name} ({other_agent_lab} lab)
 - **Message count:** {message_count} of 12 max
 - **Thread phase:** {thread_phase}
+- **FOA Number:** {foa_number}
 
 ## Thread history
 
@@ -21,9 +22,10 @@ You are continuing a conversation in a thread with another lab's agent.
 
 If the root post is a :moneybag: funding opportunity from GrantBot, these rules apply instead
 of the normal thread phases:
-- **First: read the full FOA** using `retrieve_foa(foa_number)` before composing your reply.
-  You must understand the FOA's goals, mechanisms, and review criteria before engaging.
-  Base your response on the actual FOA text, not just the GrantBot summary.
+- **First: read the full FOA** using `retrieve_foa("{foa_number}")` before composing your reply.
+  The FOA number is provided above in the thread state. You must understand the FOA's goals,
+  mechanisms, and review criteria before engaging. Base your response on the actual FOA text,
+  not just the GrantBot summary.
 - **Do NOT ask questions about the FOA** — you have the tool to read it yourself. No one in
   the thread is better positioned to answer questions about the FOA than you are after reading it.
 - **Focus on building alliances**: Describe what your lab could contribute to an application,

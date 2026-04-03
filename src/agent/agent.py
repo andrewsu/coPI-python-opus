@@ -282,6 +282,7 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
         prompt_text = prompt_text.replace("{thread_history}", history_text)
         prompt_text = prompt_text.replace("{phase_guidance}", phase_guidance)
         prompt_text = prompt_text.replace("{instructions}", instructions)
+        prompt_text = prompt_text.replace("{foa_number}", thread.foa_number or "none")
 
         messages = [{"role": "user", "content": prompt_text}]
         return system_prompt, messages
@@ -293,10 +294,12 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
     def build_phase5_prompt(
         self,
         recent_posts: list[dict[str, str]] | None = None,
+        foa_contexts: dict[str, str] | None = None,
     ) -> tuple[str, list[dict]]:
         """
         Build system + messages for Phase 5 new post.
         recent_posts: [{channel, content_snippet}] — agent's own recent top-level posts.
+        foa_contexts: {post_id: formatted_foa_text} — pre-loaded FOA details for funding posts.
         Returns (system_prompt, messages).
         """
         system_prompt = self.build_system_prompt()
@@ -305,12 +308,15 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
             "Choose to reply to an interesting post or make a new top-level post.",
         )
 
-        # Format interesting posts
+        # Format interesting posts, injecting FOA details for funding posts
         if self.state.interesting_posts:
-            interesting_text = "\n\n".join(
-                f"**Post ID: {p.post_id}** in #{p.channel} by {p.sender_agent_id}:\n{p.content_snippet}"
-                for p in self.state.interesting_posts
-            )
+            parts = []
+            for p in self.state.interesting_posts:
+                part = f"**Post ID: {p.post_id}** in #{p.channel} by {p.sender_agent_id}:\n{p.content_snippet}"
+                if foa_contexts and p.post_id in foa_contexts:
+                    part += f"\n\n<foa_details foa_number=\"{p.foa_number}\">\n{foa_contexts[p.post_id]}\n</foa_details>"
+                parts.append(part)
+            interesting_text = "\n\n".join(parts)
         else:
             interesting_text = "(none)"
 
