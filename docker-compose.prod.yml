@@ -83,6 +83,7 @@ services:
     volumes:
       - ./profiles:/app/profiles
       - ./prompts:/app/prompts
+      - ./data:/app/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -107,7 +108,7 @@ services:
     volumes:
       - ./profiles:/app/profiles
       - ./prompts:/app/prompts
-      - grantbot_data:/app/data
+      - ./data:/app/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -166,4 +167,3 @@ services:
 
 volumes:
   pgdata:
-  grantbot_data:
