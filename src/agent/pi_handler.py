@@ -24,15 +24,19 @@ class PIHandler:
         self,
         agents: dict[str, Agent],
         slack_clients: dict,  # agent_id -> AgentSlackClient
-        pi_slack_id_to_agent_id: dict[str, str],
+        pi_slack_id_to_agent_ids: dict[str, list[str]],
         message_log: MessageLog,
         session_factory=None,
     ):
         self.agents = agents
         self.slack_clients = slack_clients
-        self.pi_slack_id_to_agent_id = pi_slack_id_to_agent_id
+        self.pi_slack_id_to_agent_ids = pi_slack_id_to_agent_ids
         # Reverse mapping: agent_id -> PI slack_user_id
-        self.agent_id_to_pi_slack_id = {v: k for k, v in pi_slack_id_to_agent_id.items()}
+        self.agent_id_to_pi_slack_id = {
+            agent_id: slack_id
+            for slack_id, agent_ids in pi_slack_id_to_agent_ids.items()
+            for agent_id in agent_ids
+        }
         self.message_log = message_log
         self.session_factory = session_factory
 

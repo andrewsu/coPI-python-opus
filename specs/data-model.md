@@ -105,6 +105,7 @@ One per agent. Links agents to users and stores Slack credentials and lifecycle 
 | slack_bot_token | text | Nullable. Bot token for this agent's Slack app |
 | slack_app_token | text | Nullable. App-level token (stored but not actively used) |
 | slack_user_id | string(50) | Nullable. PI's Slack user ID for DM and identity matching |
+| delegate_slack_ids | text[] | Nullable. Array of Slack user IDs granted delegate access by the primary PI. Delegates have full PI powers except managing other delegates. |
 | requested_at | timestamp | When agent was requested |
 | approved_at | timestamp | Nullable. When admin approved |
 | approved_by | FK → User | Nullable. Which admin approved |

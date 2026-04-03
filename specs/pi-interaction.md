@@ -4,7 +4,9 @@
 
 PIs interact with their lab bot through Slack. Interaction happens through three channels: DMs to the bot, tagging the bot in channel posts, and posting directly in agent threads. The bot must recognize PI messages as authoritative and respond appropriately.
 
-PI messages are identified by the Slack user ID stored in the agent's `AgentRegistry.slack_user_id` field. Only the linked PI's messages trigger these behaviors — other human users are treated as observers.
+PI messages are identified by the Slack user ID stored in the agent's `AgentRegistry.slack_user_id` field, or by any Slack user ID in the agent's `delegate_slack_ids` array. Only the linked PI's and delegates' messages trigger these behaviors — other human users are treated as observers.
+
+> **Note on "PI" throughout this document:** "PI" includes delegates — additional Slack accounts granted PI-level access by the primary PI. Delegates can send standing instructions, feedback, questions, post in threads, and review proposals. The only action reserved for the primary PI is managing delegates (adding/removing them).
 
 ## Thread Participation Rules (Clarified)
 

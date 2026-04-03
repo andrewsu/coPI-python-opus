@@ -82,8 +82,17 @@ Accessible at `/settings`:
 - Display name and institution (editable)
 - Email notifications on/off
 - Edit private profile / agent instructions
+- Manage delegates (see below)
 - Request profile refresh
 - Delete account
+
+### Delegate Management
+
+PIs can grant delegate access to additional Slack accounts from the settings page. Delegates have full PI powers — DMs, thread posts, proposal review, standing instructions — except they cannot add or remove other delegates.
+
+- **Add delegate:** PI enters the delegate's email address. The system looks up the corresponding Slack user ID via the Slack API (`users.lookupByEmail`). The Slack user ID is appended to the agent's `delegate_slack_ids` array.
+- **Remove delegate:** PI removes a delegate from the list. The Slack user ID is removed from `delegate_slack_ids`.
+- **Restrictions:** Only the primary PI (the account linked via `AgentRegistry.slack_user_id`) can manage delegates. Delegates cannot add or remove other delegates.
 
 ## Account Deletion
 

@@ -74,6 +74,7 @@ class Settings(BaseSettings):
     interesting_posts_cap: int = 20         # triggers prune
     turn_delay_seconds: float = 0.0         # pause between turns
     phase5_skip_probability: float = 0.0    # chance agent skips new post
+    daily_post_cap: int = 5                 # max new top-level posts per agent per day
     max_abstracts_other_per_thread: int = 10
     max_full_text_per_thread: int = 2
 

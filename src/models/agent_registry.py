@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, SmallInteger, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database import Base
@@ -31,6 +31,7 @@ class AgentRegistry(Base):
     slack_bot_token: Mapped[str | None] = mapped_column(Text, nullable=True)
     slack_app_token: Mapped[str | None] = mapped_column(Text, nullable=True)
     slack_user_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    delegate_slack_ids: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
     requested_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
