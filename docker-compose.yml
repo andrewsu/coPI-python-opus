@@ -4,9 +4,9 @@ services:
   postgres:
     image: postgres:15
     environment:
-      POSTGRES_USER: copi
-      POSTGRES_PASSWORD: copi
-      POSTGRES_DB: copi
+      POSTGRES_USER: ${POSTGRES_USER:-copi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-copi}
+      POSTGRES_DB: ${POSTGRES_DB:-copi}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -21,8 +21,6 @@ services:
     ports:
       - "8001:8000"
     env_file: .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://copi:copi@postgres:5432/copi
     volumes:
       - .:/app
       - ./profiles:/app/profiles
@@ -35,8 +33,6 @@ services:
     build: .
     command: python -m src.worker.main
     env_file: .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://copi:copi@postgres:5432/copi
     volumes:
       - .:/app
       - ./profiles:/app/profiles
@@ -51,8 +47,6 @@ services:
     build: .
     command: python -m src.agent.main
     env_file: .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://copi:copi@postgres:5432/copi
     volumes:
       - .:/app
       - ./profiles:/app/profiles
@@ -67,8 +61,6 @@ services:
     build: .
     command: python -m src.agent.grantbot scheduler --run-hour 8 --max-per-channel 1
     env_file: .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://copi:copi@postgres:5432/copi
     volumes:
       - .:/app
       - ./profiles:/app/profiles
