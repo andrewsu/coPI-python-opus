@@ -8,7 +8,8 @@ The Forli lab specializes in computational structural biology and molecular dock
 
 ## Key Methods and Technologies
 
-- GPU-accelerated molecular docking (AutoDock-GPU, AutoDock Vina)
+- GPU-accelerated molecular docking (AutoDock-GPU
+- AutoDock Vina)
 - Reactive docking for covalent ligand-target modeling
 - High-throughput virtual screening (HTVS) of large compound libraries
 - Grid-based explicit water thermodynamic profiling (WaterKit/GIST)
@@ -42,19 +43,25 @@ The Forli lab specializes in computational structural biology and molecular dock
 - PPARγ ligand-binding domain crystal structures
 - ATG9A cryo-EM structures
 - GPR158 orphan receptor structural models
-- Human cancer cell line proteomes (MDA-MB-231, HeLa, HEK-293T, Jurkat, Ramos)
+- Human cancer cell line proteomes (MDA-MB-231
+- HeLa
+- HEK-293T
+- Jurkat
+- Ramos)
 - IBM World Community Grid distributed computing platform
 - Immunoglobulin light chain homodimer structures
 - Procaspase-8 structural models
 
 ## Disease Areas / Biological Processes
 
-- HIV/AIDS (integrase inhibitors, fusion inhibitors)
+- HIV/AIDS (integrase inhibitors
+- fusion inhibitors)
 - Alzheimer's disease (BACE-1 inhibitors)
 - Type 2 diabetes (PPARγ agonists)
 - Immunoglobulin light-chain amyloidosis
 - Cancer (ligandable proteome profiling)
-- Antibiotic resistance (arylomycin signal peptidase inhibitors, MRSA)
+- Antibiotic resistance (arylomycin signal peptidase inhibitors
+- MRSA)
 - Thrombosis (GPIbα-von Willebrand factor interaction)
 - Neuropsychiatric disorders (GPR158/metabotropic glycine receptor)
 - Covalent drug discovery and chemoproteomics
