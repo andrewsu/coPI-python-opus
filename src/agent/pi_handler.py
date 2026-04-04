@@ -115,11 +115,35 @@ class PIHandler:
                 new_profile = profile_match.group(1).strip()
                 agent.update_private_profile(new_profile)
 
-                # Persist to DB
+                # Persist to DB and record revision
                 if self.session_factory:
                     try:
                         async with self.session_factory() as db:
                             await agent.persist_private_profile_to_db(db)
+
+                            # Record profile revision
+                            from sqlalchemy import select
+                            from src.models import AgentRegistry, User
+                            from src.services.profile_versioning import create_revision
+                            agent_reg = (await db.execute(
+                                select(AgentRegistry).where(AgentRegistry.agent_id == agent_id)
+                            )).scalar_one_or_none()
+                            pi_user = (await db.execute(
+                                select(User).join(AgentRegistry, AgentRegistry.user_id == User.id)
+                                .where(AgentRegistry.slack_user_id == pi_slack_id)
+                            )).scalar_one_or_none()
+                            if agent_reg:
+                                summary = instruction[:200] if instruction else None
+                                await create_revision(
+                                    db,
+                                    agent_registry_id=agent_reg.id,
+                                    profile_type="private",
+                                    content=new_profile,
+                                    changed_by_user_id=pi_user.id if pi_user else None,
+                                    mechanism="slack_dm",
+                                    change_summary=f"PI instruction: {summary}" if summary else None,
+                                )
+                                await db.commit()
                     except Exception as db_exc:
                         logger.error("[%s] DB persist failed: %s", agent_id, db_exc)
 

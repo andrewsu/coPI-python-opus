@@ -180,6 +180,23 @@ Tracks per-user email engagement for auto-downgrade logic. One row per user.
 | last_notification_sent_at | timestamp | Nullable |
 | last_downgrade_at | timestamp | Nullable |
 
+### ProfileRevision
+
+Tracks every change to public profiles, private profiles, and working memory. See `profile-versioning.md` for full spec.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | uuid | Primary key |
+| agent_registry_id | FK → AgentRegistry | Which agent's profile was changed |
+| profile_type | string(10) | `public`, `private`, or `memory` |
+| content | text | Full markdown snapshot after the change |
+| changed_by_user_id | FK → User | Nullable. The human who initiated the change. Null for agent/system changes. |
+| mechanism | string(20) | `web`, `slack_dm`, `agent`, `pipeline`, or `monthly_refresh` |
+| change_summary | text | Nullable. Brief description of what changed. |
+| created_at | timestamp | |
+
+**Index:** `(agent_registry_id, profile_type, created_at DESC)` for fast history lookup.
+
 ### SimulationRun
 
 Tracks each run of the Slack agent simulation engine.

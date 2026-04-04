@@ -1921,6 +1921,30 @@ Keep it concise — under 300 words.""",
                 return
             agent.update_working_memory_file(response)
             logger.info("[%s] Working memory updated (trigger: %s)", agent.agent_id, event[:60])
+
+            # Record revision
+            if self.session_factory:
+                try:
+                    from sqlalchemy import select as sa_sel
+                    from src.models import AgentRegistry
+                    from src.services.profile_versioning import create_revision
+                    async with self.session_factory() as db:
+                        agent_reg = (await db.execute(
+                            sa_sel(AgentRegistry)
+                            .where(AgentRegistry.agent_id == agent.agent_id)
+                        )).scalar_one_or_none()
+                        if agent_reg:
+                            await create_revision(
+                                db,
+                                agent_registry_id=agent_reg.id,
+                                profile_type="memory",
+                                content=response,
+                                mechanism="agent",
+                                change_summary=event[:200],
+                            )
+                            await db.commit()
+                except Exception as rev_exc:
+                    logger.warning("[%s] Profile revision failed: %s", agent.agent_id, rev_exc)
         except Exception as exc:
             logger.error("[%s] Working memory update failed: %s", agent.agent_id, exc)
 

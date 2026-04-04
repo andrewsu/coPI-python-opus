@@ -2,7 +2,7 @@
 
 ## PI Behavioral Instructions
 
-### Collaboration Preferences
+### Collaboration preferences
 - Less interested in pure computational-computational collaborations — we have strong computational capacity in-house
 
 ### Communication Style
@@ -15,3 +15,5 @@
 
 ### Criteria to Always Explore
 - Before proposing a collaboration, identify: what specific dataset/resource would we provide? What would we get back that we can't generate ourselves?
+
+

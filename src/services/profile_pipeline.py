@@ -342,7 +342,25 @@ async def run_profile_pipeline(
         select(Publication).where(Publication.user_id == user.id)
     )
     user_pubs = pub_result.scalars().all()
-    export_profile_to_markdown(user, profile, publications=user_pubs)
+    exported_path = export_profile_to_markdown(user, profile, publications=user_pubs)
+
+    # Record revision
+    from src.models import AgentRegistry
+    from src.services.profile_versioning import create_revision
+    agent_result = await db.execute(
+        select(AgentRegistry).where(AgentRegistry.user_id == user.id)
+    )
+    agent_reg = agent_result.scalar_one_or_none()
+    if agent_reg and exported_path:
+        await create_revision(
+            db,
+            agent_registry_id=agent_reg.id,
+            profile_type="public",
+            content=exported_path.read_text(encoding="utf-8"),
+            mechanism="pipeline",
+            change_summary="Profile generated from ORCID + PubMed",
+        )
+        await db.flush()
 
     update_progress("complete", "Profile generation complete.")
     return profile

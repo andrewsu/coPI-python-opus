@@ -135,9 +135,32 @@ async def profile_save(
 
     await db.commit()
 
-    # Export to markdown for agent consumption
+    # Export to markdown for agent consumption (include publications)
     from src.services.profile_export import export_profile_to_markdown
-    export_profile_to_markdown(current_user, profile)
+    from src.models import Publication
+    pub_result = await db.execute(
+        select(Publication).where(Publication.user_id == current_user.id)
+    )
+    user_pubs = list(pub_result.scalars().all())
+    exported_path = export_profile_to_markdown(current_user, profile, publications=user_pubs)
+
+    # Record revision
+    from src.services.profile_versioning import create_revision
+    from src.models import AgentRegistry
+    agent_result = await db.execute(
+        select(AgentRegistry).where(AgentRegistry.user_id == current_user.id)
+    )
+    agent_reg = agent_result.scalar_one_or_none()
+    if agent_reg and exported_path:
+        await create_revision(
+            db,
+            agent_registry_id=agent_reg.id,
+            profile_type="public",
+            content=exported_path.read_text(encoding="utf-8"),
+            changed_by_user_id=current_user.id,
+            mechanism="web",
+        )
+        await db.commit()
 
     return RedirectResponse(url="/profile?saved=1", status_code=302)
 

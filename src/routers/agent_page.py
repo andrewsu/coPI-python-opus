@@ -550,6 +550,18 @@ async def save_private_profile(
         profile.private_profile_md = content.strip() or None
         await db.commit()
 
+    # Record revision
+    from src.services.profile_versioning import create_revision
+    await create_revision(
+        db,
+        agent_registry_id=agent.id,
+        profile_type="private",
+        content=content,
+        changed_by_user_id=current_user.id,
+        mechanism="web",
+    )
+    await db.commit()
+
     return RedirectResponse(url=f"/agent/{agent_id}/profile", status_code=302)
 
 
@@ -662,10 +674,28 @@ async def save_public_profile(
 
     await db.commit()
 
-    # Export to markdown for agent consumption
+    # Export to markdown for agent consumption (include publications)
     pi_result = await db.execute(select(User).where(User.id == agent.user_id))
     pi_user = pi_result.scalar_one()
-    export_profile_to_markdown(pi_user, profile)
+    from src.models import Publication
+    pub_result = await db.execute(
+        select(Publication).where(Publication.user_id == agent.user_id)
+    )
+    user_pubs = list(pub_result.scalars().all())
+    exported_path = export_profile_to_markdown(pi_user, profile, publications=user_pubs)
+
+    # Record revision
+    from src.services.profile_versioning import create_revision
+    content = exported_path.read_text(encoding="utf-8") if exported_path else ""
+    await create_revision(
+        db,
+        agent_registry_id=agent.id,
+        profile_type="public",
+        content=content,
+        changed_by_user_id=current_user.id,
+        mechanism="web",
+    )
+    await db.commit()
 
     logger.info(
         "Public profile for agent %s updated by %s",

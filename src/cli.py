@@ -208,5 +208,58 @@ def regenerate_profiles():
     _run(_regenerate())
 
 
+@app.command(name="backfill-profile-revisions")
+def backfill_profile_revisions():
+    """Create initial ProfileRevision rows from existing profile files on disk."""
+    async def _backfill():
+        from pathlib import Path
+        from sqlalchemy import select
+        from src.models import AgentRegistry
+        from src.services.profile_versioning import create_revision
+
+        engine, factory = await _get_db()
+        async with factory() as db:
+            # Load all agents
+            result = await db.execute(select(AgentRegistry))
+            agents = {a.agent_id: a for a in result.scalars().all()}
+
+            count = 0
+            for profile_type, subdir in [
+                ("public", "profiles/public"),
+                ("private", "profiles/private"),
+                ("memory", "profiles/memory"),
+            ]:
+                dirpath = Path(subdir)
+                if not dirpath.exists():
+                    continue
+                for filepath in sorted(dirpath.glob("*.md")):
+                    agent_id = filepath.stem
+                    agent_reg = agents.get(agent_id)
+                    if not agent_reg:
+                        console.print(
+                            f"[yellow]Skipping {filepath} — no agent '{agent_id}' in registry[/yellow]"
+                        )
+                        continue
+                    content = filepath.read_text(encoding="utf-8")
+                    if not content.strip():
+                        continue
+                    await create_revision(
+                        db,
+                        agent_registry_id=agent_reg.id,
+                        profile_type=profile_type,
+                        content=content,
+                        mechanism="pipeline",
+                        change_summary="Initial backfill from existing file",
+                    )
+                    count += 1
+                    console.print(f"[green]Backfilled {profile_type} revision for {agent_id}[/green]")
+
+            await db.commit()
+            console.print(f"\n[bold green]Created {count} profile revisions.[/bold green]")
+        await engine.dispose()
+
+    _run(_backfill())
+
+
 if __name__ == "__main__":
     app()
