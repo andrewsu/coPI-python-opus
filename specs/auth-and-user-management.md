@@ -79,12 +79,14 @@ Edits save immediately (AJAX or form post) and bump `profile_version`.
 ## Settings
 
 Accessible at `/settings`:
-- Display name and institution (editable)
-- Email notifications on/off
-- Edit private profile / agent instructions
-- Manage delegates (see below)
-- Request profile refresh
-- Delete account
+- Email notification frequency (daily, twice a week, weekly, every two weeks, off)
+- Status indicator: "Active" or "Paused by system — review pending proposals to reactivate"
+- Account deletion link
+
+Additional settings are accessible from other pages:
+- Display name and institution (editable from `/profile/edit`)
+- Private profile / agent instructions (editable from `/agent/{agent_id}/profile/edit`)
+- Delegate management (from `/agent/{agent_id}/dashboard`)
 
 ### Delegate Management
 

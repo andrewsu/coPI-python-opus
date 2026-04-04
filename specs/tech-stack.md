@@ -212,12 +212,14 @@ copi-python/
 │   │   ├── job.py
 │   │   ├── agent_activity.py   # SimulationRun, AgentMessage, AgentChannel
 │   │   ├── agent_registry.py   # AgentRegistry, ProposalReview
+│   │   ├── email_notification.py # EmailNotification, EmailEngagementTracker
 ���   │   └── llm_call_log.py     # LlmCallLog
 │   ├── routers/                # FastAPI routers
 │   │   ├── auth.py             # ORCID OAuth flow
 │   │   ├── profile.py          # Profile view/edit
 │   │   ├── onboarding.py       # Signup flow
 │   │   ├── admin.py            # Admin dashboard
+│   │   ├── settings.py         # User settings, notification prefs, unsubscribe
 │   │   └── agent_page.py       # My Agent page, proposal review
 │   ├── services/
 │   │   ��── orcid.py            # ORCID API client
@@ -225,6 +227,9 @@ copi-python/
 │   │   ├── llm.py              # Anthropic API wrapper
 │   │   ├── grants.py           # Grants.gov API client
 │   │   ├── profile_pipeline.py # Orchestrates ingestion steps
+│   │   ├── email.py            # SES outbound (delegate invitations)
+│   │   ├── email_notifications.py # Proposal notification scheduling/sending
+│   │   ├── email_inbound.py    # Inbound email processing (S3, LLM classification)
 │   │   └── profile_export.py   # Export profile to markdown
 ���   ├── worker/
 │   │   └── main.py             # Job queue worker process

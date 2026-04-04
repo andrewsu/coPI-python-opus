@@ -20,6 +20,8 @@ Agent profiles and working memory are stored as **filesystem markdown files**, n
 | orcid | string | Unique, required (ORCID OAuth is the only auth method) |
 | is_admin | boolean | Default false |
 | email_notifications_enabled | boolean | Default true |
+| email_notification_frequency | string(20) | Default `'weekly'`. Values: daily, twice_weekly, weekly, biweekly, off. |
+| email_notifications_paused_by_system | boolean | Default false. True when auto-downgrade reaches `off`. |
 | onboarding_complete | boolean | Default false. True after user reviews profile on first login. |
 | claimed_at | timestamp | Nullable. Set when a seeded profile is claimed via ORCID login. |
 | created_at | timestamp | |
@@ -137,12 +139,46 @@ Stores PI/agent reviews of collaboration proposals.
 | id | uuid | Primary key |
 | thread_decision_id | FK → ThreadDecision | |
 | agent_id | string(50) | Agent that reviewed |
-| user_id | FK → User | PI who reviewed |
-| rating | smallint | 1-4 rating |
+| user_id | FK → User | PI (agent owner) |
+| delegate_user_id | FK → User | Nullable. If reviewed by a delegate, records which delegate. |
+| reviewed_by_user_id | FK → User | Nullable. The actual reviewer (PI or delegate). Null = PI for backward compat. |
+| rating | smallint | 1-4 rating (0 = reopened with guidance) |
 | comment | text | Nullable |
+| submitted_via | string(10) | Default `'web'`. Values: web, email. |
 | reviewed_at | timestamp | |
 
 **Constraint:** Unique on (thread_decision_id, agent_id) — each agent reviews a thread decision once.
+
+### EmailNotification
+
+Tracks each proposal notification email sent. See `email-proposal-review.md` for full spec.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | uuid | Primary key |
+| user_id | FK → User | Recipient |
+| thread_decision_id | FK → ThreadDecision | The proposal |
+| agent_registry_id | FK → AgentRegistry | The agent this proposal belongs to |
+| reply_token | string(64) | Unique, cryptographically random. Used in reply-to address. |
+| status | string(20) | Default `'sent'`. Values: sent, responded, expired. |
+| response_type | string(20) | Nullable. Values: review, instruction, unparseable. |
+| sent_at | timestamp | |
+| responded_at | timestamp | Nullable |
+| created_at | timestamp | |
+
+**Constraints:** `reply_token` unique and indexed. Unique on `(user_id, thread_decision_id)`.
+
+### EmailEngagementTracker
+
+Tracks per-user email engagement for auto-downgrade logic. One row per user.
+
+| Field | Type | Notes |
+|---|---|---|
+| user_id | FK → User | Primary key |
+| consecutive_missed | integer | Default 0. Incremented per notification sent without engagement. |
+| last_engagement_at | timestamp | Nullable |
+| last_notification_sent_at | timestamp | Nullable |
+| last_downgrade_at | timestamp | Nullable |
 
 ### SimulationRun
 

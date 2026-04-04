@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Settings — CoPI{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Settings</h1>
+
+    {% if request.query_params.get('saved') %}
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+        <p class="text-green-800 text-sm">Settings saved.</p>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/settings/save">
+        <!-- Email Notifications -->
+        <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-1">Email Notifications</h2>
+            <p class="text-sm text-gray-500 mb-4">
+                Get email reminders when collaboration proposals are waiting for your review.
+                You can review proposals by replying directly to the email.
+            </p>
+
+            {% if user.email_notifications_paused_by_system %}
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                <p class="text-amber-800 text-sm">
+                    <strong>Paused by system</strong> — notifications were turned off because
+                    proposals weren't being reviewed. Change the frequency below to reactivate.
+                </p>
+            </div>
+            {% endif %}
+
+            <label for="email_notification_frequency" class="block text-sm font-medium text-gray-700 mb-2">
+                Notification frequency
+            </label>
+            <select name="email_notification_frequency" id="email_notification_frequency"
+                    class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                {% for value, label in frequency_labels.items() %}
+                <option value="{{ value }}" {% if user.email_notification_frequency == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
+
+            {% if tracker and tracker.last_notification_sent_at %}
+            <p class="text-xs text-gray-400 mt-2">
+                Last notification sent:
+                <span data-utc="{{ tracker.last_notification_sent_at.isoformat() }}" data-utc-fmt="short">
+                    {{ tracker.last_notification_sent_at.strftime('%b %d, %H:%M UTC') }}
+                </span>
+            </p>
+            {% endif %}
+        </div>
+
+        <div class="flex justify-end">
+            <button type="submit"
+                    class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium">
+                Save Settings
+            </button>
+        </div>
+    </form>
+
+    <!-- Account section -->
+    <div class="border-t border-gray-200 mt-8 pt-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-2">Account</h2>
+        <a href="/profile/delete-account" class="text-sm text-red-600 hover:text-red-700">
+            Delete account
+        </a>
+    </div>
+</div>
+{% endblock %}

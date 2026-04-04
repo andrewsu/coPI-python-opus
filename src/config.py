@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     # AWS SES
     aws_region: str = "us-east-2"
     ses_sender_email: str = "noreply@copi.science"
+    ses_reply_domain: str = "reply.copi.science"
+    ses_inbound_s3_bucket: str = "copi-inbound-email"
+    ses_inbound_s3_prefix: str = "inbound/"
+
+    # Email notification scheduling
+    notification_check_interval: int = 300  # seconds (5 minutes)
+    inbound_poll_interval: int = 60  # seconds
 
     # Slack tokens — one pair per agent
     slack_bot_token_su: str = ""

@@ -22,7 +22,7 @@ from src.models import (
     ThreadDecision,
     User,
 )
-from src.services.profile_export import export_private_profile
+from src.services.profile_export import export_private_profile, export_profile_to_markdown
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -359,10 +359,18 @@ async def review_proposal(
         agent_id=agent.agent_id,
         user_id=agent.user_id,  # Always the PI
         delegate_user_id=current_user.id if not is_owner else None,
+        reviewed_by_user_id=current_user.id,
         rating=rating,
         comment=comment.strip() or None,
+        submitted_via="web",
     )
     db.add(review)
+
+    # Record engagement and mark any outstanding email notification as responded
+    from src.services.email_notifications import mark_notification_responded, record_engagement
+    await record_engagement(current_user.id, db)
+    await mark_notification_responded(current_user.id, thread_decision_id, "review", db)
+
     await db.commit()
 
     return RedirectResponse(url=f"/agent/{agent_id}/dashboard", status_code=302)
@@ -444,11 +452,19 @@ async def reopen_proposal(
             agent_id=agent.agent_id,
             user_id=agent.user_id,  # Always the PI
             delegate_user_id=current_user.id if not is_owner else None,
+            reviewed_by_user_id=current_user.id,
             rating=0,  # 0 = reopened with guidance, not a rating
             comment=f"[Reopened] {guidance[:500]}",
+            submitted_via="web",
         )
         db.add(review)
-        await db.commit()
+
+    # Record engagement and mark any outstanding email notification as responded
+    from src.services.email_notifications import mark_notification_responded, record_engagement
+    await record_engagement(current_user.id, db)
+    await mark_notification_responded(current_user.id, thread_decision_id, "instruction", db)
+
+    await db.commit()
 
     return RedirectResponse(url=f"/agent/{agent_id}/dashboard", status_code=302)
 
@@ -535,6 +551,130 @@ async def save_private_profile(
         await db.commit()
 
     return RedirectResponse(url=f"/agent/{agent_id}/profile", status_code=302)
+
+
+# --------------------------------------------------------------------------
+# Public profile view/edit (PI and delegates)
+# --------------------------------------------------------------------------
+
+
+def _parse_list(val: str) -> list[str]:
+    return [s.strip() for s in val.split(",") if s.strip()]
+
+
+@router.get("/{agent_id}/public-profile", response_class=HTMLResponse)
+async def view_public_profile(
+    agent_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """View agent's public profile."""
+    agent, is_owner = await get_agent_with_access(agent_id, db, current_user)
+    if agent.status != "active":
+        return RedirectResponse(url="/agent", status_code=302)
+
+    # Load the PI's profile (not the delegate's)
+    profile_result = await db.execute(
+        select(ResearcherProfile).where(ResearcherProfile.user_id == agent.user_id)
+    )
+    profile = profile_result.scalar_one_or_none()
+
+    # Load PI user for display
+    pi_result = await db.execute(select(User).where(User.id == agent.user_id))
+    pi_user = pi_result.scalar_one()
+
+    return templates.TemplateResponse(
+        request,
+        "agent/public_profile.html",
+        _template_context(
+            request, current_user, agent=agent, is_owner=is_owner,
+            profile=profile, pi_user=pi_user, editing=False,
+            saved=request.query_params.get("saved"),
+        ),
+    )
+
+
+@router.get("/{agent_id}/public-profile/edit", response_class=HTMLResponse)
+async def edit_public_profile(
+    agent_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Edit agent's public profile."""
+    agent, is_owner = await get_agent_with_access(agent_id, db, current_user)
+    if agent.status != "active":
+        return RedirectResponse(url="/agent", status_code=302)
+
+    profile_result = await db.execute(
+        select(ResearcherProfile).where(ResearcherProfile.user_id == agent.user_id)
+    )
+    profile = profile_result.scalar_one_or_none()
+
+    pi_result = await db.execute(select(User).where(User.id == agent.user_id))
+    pi_user = pi_result.scalar_one()
+
+    return templates.TemplateResponse(
+        request,
+        "agent/public_profile.html",
+        _template_context(
+            request, current_user, agent=agent, is_owner=is_owner,
+            profile=profile, pi_user=pi_user, editing=True,
+        ),
+    )
+
+
+@router.post("/{agent_id}/public-profile/save")
+async def save_public_profile(
+    agent_id: str,
+    request: Request,
+    research_summary: str = Form(""),
+    techniques: str = Form(""),
+    experimental_models: str = Form(""),
+    disease_areas: str = Form(""),
+    key_targets: str = Form(""),
+    keywords: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Save public profile changes (PI or delegate)."""
+    agent, is_owner = await get_agent_with_access(agent_id, db, current_user)
+    if agent.status != "active":
+        return RedirectResponse(url="/agent", status_code=302)
+
+    # Update the PI's profile
+    profile_result = await db.execute(
+        select(ResearcherProfile).where(ResearcherProfile.user_id == agent.user_id)
+    )
+    profile = profile_result.scalar_one_or_none()
+    if not profile:
+        profile = ResearcherProfile(user_id=agent.user_id)
+        db.add(profile)
+
+    profile.research_summary = research_summary
+    profile.techniques = _parse_list(techniques)
+    profile.experimental_models = _parse_list(experimental_models)
+    profile.disease_areas = _parse_list(disease_areas)
+    profile.key_targets = _parse_list(key_targets)
+    profile.keywords = _parse_list(keywords)
+    profile.profile_version = (profile.profile_version or 0) + 1
+
+    await db.commit()
+
+    # Export to markdown for agent consumption
+    pi_result = await db.execute(select(User).where(User.id == agent.user_id))
+    pi_user = pi_result.scalar_one()
+    export_profile_to_markdown(pi_user, profile)
+
+    logger.info(
+        "Public profile for agent %s updated by %s",
+        agent.agent_id, current_user.name,
+    )
+
+    return RedirectResponse(
+        url=f"/agent/{agent_id}/public-profile?saved=1", status_code=302
+    )
 
 
 # --------------------------------------------------------------------------
