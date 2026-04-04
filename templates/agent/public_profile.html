@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+{% block title %}Public Profile — {{ agent.bot_name }} — CoPI{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Public Profile</h1>
+            <p class="text-sm text-gray-500">{{ agent.bot_name }} — {{ pi_user.name }} Lab</p>
+        </div>
+        <div class="flex gap-3">
+            {% if not editing %}
+            <a href="/agent/{{ agent.agent_id }}/public-profile/edit"
+               class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
+                Edit
+            </a>
+            {% endif %}
+            <a href="/agent/{{ agent.agent_id }}/dashboard"
+               class="text-gray-500 hover:text-gray-700 text-sm py-2">
+                ← Dashboard
+            </a>
+        </div>
+    </div>
+
+    {% if saved %}
+    <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-6 text-sm text-green-700">
+        Public profile saved and exported.
+    </div>
+    {% endif %}
+
+    {% if editing %}
+    <form method="POST" action="/agent/{{ agent.agent_id }}/public-profile/save" id="profile-form">
+
+        {% if profile %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Research Profile</h2>
+
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Research Summary</label>
+                <textarea name="research_summary" rows="7"
+                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">{{ profile.research_summary or '' }}</textarea>
+                <p class="text-xs text-gray-400 mt-1">150-250 word narrative connecting your research themes.</p>
+            </div>
+
+            <div class="mb-5" data-tag-field="techniques">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Techniques & Methods</label>
+                <input type="hidden" name="techniques" value="{{ (profile.techniques or []) | join(', ') }}">
+                <div class="tag-container border border-gray-300 rounded-lg px-2 py-1.5 flex flex-wrap gap-1.5 min-h-[38px] focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent cursor-text">
+                    {% for t in (profile.techniques or []) %}
+                    <span class="tag-pill">{{ t }}<button type="button" class="tag-remove" aria-label="Remove">&times;</button></span>
+                    {% endfor %}
+                    <input type="text" class="tag-input" placeholder="Type and press Enter to add...">
+                </div>
+                <p class="text-xs text-gray-400 mt-1">e.g. RNA-seq, CRISPR-Cas9, mass spectrometry</p>
+            </div>
+
+            <div class="mb-5" data-tag-field="experimental_models">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Model Systems</label>
+                <input type="hidden" name="experimental_models" value="{{ (profile.experimental_models or []) | join(', ') }}">
+                <div class="tag-container border border-gray-300 rounded-lg px-2 py-1.5 flex flex-wrap gap-1.5 min-h-[38px] focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent cursor-text">
+                    {% for m in (profile.experimental_models or []) %}
+                    <span class="tag-pill">{{ m }}<button type="button" class="tag-remove" aria-label="Remove">&times;</button></span>
+                    {% endfor %}
+                    <input type="text" class="tag-input" placeholder="Type and press Enter to add...">
+                </div>
+                <p class="text-xs text-gray-400 mt-1">Cell lines, model organisms, databases</p>
+            </div>
+
+            <div class="mb-5" data-tag-field="disease_areas">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Disease Areas</label>
+                <input type="hidden" name="disease_areas" value="{{ (profile.disease_areas or []) | join(', ') }}">
+                <div class="tag-container border border-gray-300 rounded-lg px-2 py-1.5 flex flex-wrap gap-1.5 min-h-[38px] focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent cursor-text">
+                    {% for d in (profile.disease_areas or []) %}
+                    <span class="tag-pill">{{ d }}<button type="button" class="tag-remove" aria-label="Remove">&times;</button></span>
+                    {% endfor %}
+                    <input type="text" class="tag-input" placeholder="Type and press Enter to add...">
+                </div>
+                <p class="text-xs text-gray-400 mt-1">e.g. neurodegeneration, osteoarthritis</p>
+            </div>
+
+            <div class="mb-5" data-tag-field="key_targets">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Key Molecular Targets</label>
+                <input type="hidden" name="key_targets" value="{{ (profile.key_targets or []) | join(', ') }}">
+                <div class="tag-container border border-gray-300 rounded-lg px-2 py-1.5 flex flex-wrap gap-1.5 min-h-[38px] focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent cursor-text">
+                    {% for k in (profile.key_targets or []) %}
+                    <span class="tag-pill">{{ k }}<button type="button" class="tag-remove" aria-label="Remove">&times;</button></span>
+                    {% endfor %}
+                    <input type="text" class="tag-input" placeholder="Type and press Enter to add...">
+                </div>
+                <p class="text-xs text-gray-400 mt-1">e.g. ATF6, UPR, FoxO</p>
+            </div>
+
+            <div class="mb-5" data-tag-field="keywords">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Keywords</label>
+                <input type="hidden" name="keywords" value="{{ (profile.keywords or []) | join(', ') }}">
+                <div class="tag-container border border-gray-300 rounded-lg px-2 py-1.5 flex flex-wrap gap-1.5 min-h-[38px] focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent cursor-text">
+                    {% for kw in (profile.keywords or []) %}
+                    <span class="tag-pill">{{ kw }}<button type="button" class="tag-remove" aria-label="Remove">&times;</button></span>
+                    {% endfor %}
+                    <input type="text" class="tag-input" placeholder="Type and press Enter to add...">
+                </div>
+                <p class="text-xs text-gray-400 mt-1">Additional MeSH-style keywords</p>
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6 text-center text-gray-400 text-sm">
+            No public profile has been generated yet. The PI needs to complete onboarding first.
+        </div>
+        {% endif %}
+
+        <div class="flex gap-3">
+            <button type="submit"
+                    class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 font-medium">
+                Save Changes
+            </button>
+            <a href="/agent/{{ agent.agent_id }}/public-profile"
+               class="text-gray-600 px-6 py-2 rounded-lg border border-gray-300 hover:bg-gray-50">
+                Cancel
+            </a>
+        </div>
+    </form>
+
+    {% else %}
+    {# Read-only view #}
+    {% if profile and profile.research_summary %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-3">Research Summary</h2>
+        <p class="text-sm text-gray-700 leading-relaxed">{{ profile.research_summary }}</p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% if profile.techniques %}
+            <div>
+                <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">Techniques & Methods</h3>
+                <div class="flex flex-wrap gap-1.5">
+                    {% for t in profile.techniques %}
+                    <span class="tag-pill">{{ t }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if profile.experimental_models %}
+            <div>
+                <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">Model Systems</h3>
+                <div class="flex flex-wrap gap-1.5">
+                    {% for m in profile.experimental_models %}
+                    <span class="tag-pill">{{ m }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if profile.disease_areas %}
+            <div>
+                <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">Disease Areas</h3>
+                <div class="flex flex-wrap gap-1.5">
+                    {% for d in profile.disease_areas %}
+                    <span class="tag-pill">{{ d }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if profile.key_targets %}
+            <div>
+                <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">Key Molecular Targets</h3>
+                <div class="flex flex-wrap gap-1.5">
+                    {% for k in profile.key_targets %}
+                    <span class="tag-pill">{{ k }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if profile.keywords %}
+            <div class="md:col-span-2">
+                <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">Keywords</h3>
+                <div class="flex flex-wrap gap-1.5">
+                    {% for kw in profile.keywords %}
+                    <span class="tag-pill">{{ kw }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center text-gray-400 text-sm">
+        No public profile content yet.
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+
+<style>
+    .tag-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background-color: #eef2ff;
+        color: #4338ca;
+        font-size: 0.8125rem;
+        padding: 2px 8px;
+        border-radius: 9999px;
+        white-space: nowrap;
+        line-height: 1.5;
+    }
+    .tag-remove {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: transparent;
+        border: none;
+        color: #6366f1;
+        font-size: 14px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0;
+    }
+    .tag-remove:hover {
+        background-color: #c7d2fe;
+        color: #3730a3;
+    }
+    .tag-input {
+        flex: 1 1 120px;
+        min-width: 120px;
+        border: none;
+        outline: none;
+        font-size: 0.875rem;
+        padding: 2px 4px;
+        background: transparent;
+    }
+    .tag-input::placeholder {
+        color: #9ca3af;
+    }
+</style>
+
+{% if editing %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[data-tag-field]').forEach(function(wrapper) {
+        var hiddenInput = wrapper.querySelector('input[type="hidden"]');
+        var container = wrapper.querySelector('.tag-container');
+        var textInput = wrapper.querySelector('.tag-input');
+
+        container.addEventListener('click', function() { textInput.focus(); });
+
+        function syncHidden() {
+            var pills = container.querySelectorAll('.tag-pill');
+            var values = [];
+            pills.forEach(function(pill) {
+                var text = pill.childNodes[0].textContent.trim();
+                if (text) values.push(text);
+            });
+            hiddenInput.value = values.join(', ');
+        }
+
+        function addTag(text) {
+            text = text.trim();
+            if (!text) return;
+            var existing = container.querySelectorAll('.tag-pill');
+            for (var i = 0; i < existing.length; i++) {
+                if (existing[i].childNodes[0].textContent.trim().toLowerCase() === text.toLowerCase()) return;
+            }
+            var pill = document.createElement('span');
+            pill.className = 'tag-pill';
+            pill.textContent = text;
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'tag-remove';
+            btn.setAttribute('aria-label', 'Remove');
+            btn.innerHTML = '&times;';
+            btn.addEventListener('click', function() { pill.remove(); syncHidden(); });
+            pill.appendChild(btn);
+            container.insertBefore(pill, textInput);
+            syncHidden();
+        }
+
+        textInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                addTag(textInput.value.replace(/,/g, ''));
+                textInput.value = '';
+            }
+            if (e.key === 'Backspace' && textInput.value === '') {
+                var pills = container.querySelectorAll('.tag-pill');
+                if (pills.length > 0) { pills[pills.length - 1].remove(); syncHidden(); }
+            }
+        });
+
+        textInput.addEventListener('paste', function(e) {
+            e.preventDefault();
+            var pasted = (e.clipboardData || window.clipboardData).getData('text');
+            pasted.split(',').forEach(function(item) { addTag(item); });
+        });
+
+        textInput.addEventListener('blur', function() {
+            if (textInput.value.trim()) { addTag(textInput.value); textInput.value = ''; }
+        });
+
+        container.querySelectorAll('.tag-remove').forEach(function(btn) {
+            btn.addEventListener('click', function() { btn.parentElement.remove(); syncHidden(); });
+        });
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

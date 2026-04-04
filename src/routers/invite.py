@@ -76,11 +76,62 @@ async def accept_invite(
         request.session["pending_invite_token"] = token
         return RedirectResponse(url="/login/start", status_code=302)
 
-    if not user.onboarding_complete:
-        request.session["pending_invite_token"] = token
-        return RedirectResponse(url="/onboarding", status_code=302)
+    # Show confirmation page (no onboarding required for delegates)
+    agent_result = await db.execute(
+        select(AgentRegistry).where(AgentRegistry.id == invitation.agent_registry_id)
+    )
+    agent = agent_result.scalar_one()
 
-    # Process the acceptance
+    return templates.TemplateResponse(
+        request,
+        "invite/accept.html",
+        {
+            "request": request,
+            "pi_name": agent.pi_name,
+            "bot_name": agent.bot_name,
+            "token": token,
+            "invitation_email": invitation.email,
+        },
+    )
+
+
+@router.post("/invite/{token}/accept", response_class=HTMLResponse)
+async def confirm_accept_invite(
+    token: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Process explicit acceptance of a delegate invitation."""
+    result = await db.execute(
+        select(DelegateInvitation).where(DelegateInvitation.token == token)
+    )
+    invitation = result.scalar_one_or_none()
+
+    if not invitation or invitation.status != "pending":
+        return templates.TemplateResponse(
+            request,
+            "invite/error.html",
+            {"request": request, "error": "This invitation is no longer valid."},
+        )
+
+    if invitation.expires_at < datetime.now(timezone.utc):
+        invitation.status = "expired"
+        await db.commit()
+        return templates.TemplateResponse(
+            request,
+            "invite/error.html",
+            {"request": request, "error": "This invitation has expired. Ask the PI to send a new one."},
+        )
+
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return RedirectResponse(url=f"/invite/{token}", status_code=302)
+
+    user_result = await db.execute(select(User).where(User.id == user_id_str))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        return RedirectResponse(url=f"/invite/{token}", status_code=302)
+
     return await _accept_invitation(invitation, user, db, request)
 
 

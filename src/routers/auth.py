@@ -148,14 +148,9 @@ async def auth_callback(
     # Set session
     request.session["user_id"] = str(user.id)
 
-    # Check for pending invite token
-    pending_token = request.session.get("pending_invite_token")
+    # Check for pending invite token — skip onboarding, go straight to acceptance
+    pending_token = request.session.pop("pending_invite_token", None)
     if pending_token:
-        if not user.onboarding_complete:
-            # Token stays in session; onboarding will redirect to /invite/{token} on completion
-            return RedirectResponse(url="/onboarding", status_code=302)
-        # Existing user with complete onboarding — go accept the invite
-        request.session.pop("pending_invite_token", None)
         return RedirectResponse(url=f"/invite/{pending_token}", status_code=302)
 
     # Redirect based on onboarding status
