@@ -41,24 +41,28 @@ async def fetch_orcid_profile(orcid_id: str) -> dict[str, Any]:
         if e.get("primary") or not result.get("email"):
             result["email"] = e.get("email")
 
-    # Current employment (affiliation)
+    # Current employment (affiliation) — prefer primary (lowest display-index)
     employments = (
         record.get("activities-summary", {})
         .get("employments", {})
         .get("affiliation-group", [])
     )
+    current_employments: list[dict[str, Any]] = []
     for grp in employments:
         for summaries in grp.get("summaries", []):
             emp = summaries.get("employment-summary", {})
             if emp.get("end-date") is None:  # Current employment
-                org = emp.get("organization", {})
-                result["institution"] = org.get("name")
-                dept = emp.get("department-name")
-                if dept:
-                    result["department"] = dept
-                break
-        if "institution" in result:
-            break
+                current_employments.append(emp)
+                break  # one per group
+    # Sort by display-index ascending: 0 = primary/preferred position
+    current_employments.sort(key=lambda e: int(e.get("display-index", 999)))
+    if current_employments:
+        emp = current_employments[0]
+        org = emp.get("organization", {})
+        result["institution"] = org.get("name")
+        dept = emp.get("department-name")
+        if dept:
+            result["department"] = dept
 
     # Researcher URLs (lab website)
     urls = record.get("person", {}).get("researcher-urls", {}).get("researcher-url", [])
