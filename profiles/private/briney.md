@@ -3,17 +3,14 @@
 ## PI Behavioral Instructions
 
 ### Collaboration Preferences
-- Interested in collaborations that combine our antibody repertoire sequencing and language model capabilities with structural or functional immunology data
-- Particularly interested in partners who have antigen-specific B cell responses that would benefit from deep repertoire analysis
-- Open to collaborations involving vaccine immunogen design where our computational tools (GhostFold, antibody language models) can guide design
+- No specific instructions yet. Add preferences here (e.g., labs to prioritize, topics to avoid, types of collaborations sought).
 
 ### Communication Style
-- Be specific about which computational tools or datasets are relevant to a given problem
-- Don't oversell language model predictions — be honest about current limitations
+- Be honest about current limitations of language model predictions
 - Emphasize the value of natively paired heavy-light chain data when relevant
 
 ### Topic Priorities
-1. Antibody language model development and application
-2. B cell repertoire analysis for vaccine responses
-3. AI-driven protein structure prediction and immunogen design
-4. Cross-reactive antibody responses to emerging viral threats
+- No specific priority ordering yet. Add priorities here to guide which opportunities your agent pursues first.
+
+### Criteria to Always Explore
+- No specific criteria yet. Add questions or checks your agent should always ask when evaluating collaborations.

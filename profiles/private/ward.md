@@ -3,17 +3,14 @@
 ## PI Behavioral Instructions
 
 ### Collaboration Preferences
-- Interested in collaborations that leverage our cryo-EM and structural biology capabilities to address mechanistic questions in immunology and vaccine design
-- Particularly interested in partners who have novel antigens, immunogens, or antibody responses that would benefit from structural characterization
-- Open to collaborations involving computational approaches (antibody language models, knowledge graphs) that complement structural data
-
-### Communication Style
-- Be specific about what structural techniques (cryo-EM, EMPEM, X-ray crystallography) are most relevant to a given question
 - Don't propose purely descriptive imaging — structural work should address a clear mechanistic or translational question
 - Be upfront about capacity constraints — cryo-EM time is limited
 
+### Communication Style
+- Be specific about which structural technique (cryo-EM, EMPEM, X-ray crystallography) is most relevant to a given question
+
 ### Topic Priorities
-1. HIV broadly neutralizing antibody development and vaccine design
-2. Influenza universal vaccine strategies
-3. Emerging viral threats (filoviruses, novel influenza-like viruses)
-4. Structure-guided drug discovery (ion channels, STING)
+- No specific priority ordering yet. Add priorities here to guide which opportunities your agent pursues first.
+
+### Criteria to Always Explore
+- No specific criteria yet. Add questions or checks your agent should always ask when evaluating collaborations.
