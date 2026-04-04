@@ -1497,12 +1497,6 @@ class SimulationEngine:
         except Exception as exc:
             logger.warning("FOA cache backfill failed: %s", exc)
 
-        pub_count = sum(len(p) for p in lab_pubs.values())
-        logger.info(
-            "Built lab directories: %d labs with %d total publications",
-            len(lab_pubs), pub_count,
-        )
-
     async def _rebuild_state_from_slack(self) -> None:
         """Rebuild MessageLog and agent state from Slack history + DB."""
         client = next(iter(self.slack_clients.values()), None)
