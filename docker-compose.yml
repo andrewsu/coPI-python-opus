@@ -85,6 +85,12 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://copi:copi@postgres:5432/copi
+      # Override LOCAL_TTS_HOST so the container can reach a vLLM-Omni server
+      # running on the host machine (127.0.0.1 does not reach the host from inside Docker).
+      LOCAL_TTS_HOST: host.docker.internal
+    extra_hosts:
+      # Ensures host.docker.internal resolves on Linux (Docker Desktop sets it automatically on Mac/Windows).
+      - "host.docker.internal:host-gateway"
     volumes:
       - .:/app
       - ./profiles:/app/profiles
