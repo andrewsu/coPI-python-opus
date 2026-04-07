@@ -296,6 +296,7 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
         recent_posts: list[dict[str, str]] | None = None,
         foa_contexts: dict[str, str] | None = None,
         thread_foa_contexts: dict[str, str] | None = None,
+        prior_threads: dict[str, list[dict]] | None = None,
     ) -> tuple[str, list[dict]]:
         """
         Build system + messages for Phase 5 new post.
@@ -303,6 +304,8 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
         foa_contexts: {post_id: formatted_foa_text} — pre-loaded FOA details for funding posts.
         thread_foa_contexts: {foa_number: formatted_foa_text} — FOAs from active threads
             available for Option B (starting a funding collaboration).
+        prior_threads: {other_agent_id: [{channel, outcome, summary}]} — all closed threads
+            grouped by other agent, for dedup context.
         Returns (system_prompt, messages).
         """
         system_prompt = self.build_system_prompt()
@@ -335,9 +338,31 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
         else:
             recent_text = "(none)"
 
+        # Format prior conversations for dedup
+        if prior_threads:
+            prior_parts = []
+            for other_id in sorted(prior_threads):
+                agent_label = f"{other_id.capitalize()}Bot"
+                thread_lines = []
+                for t in prior_threads[other_id]:
+                    outcome_label = t["outcome"].replace("_", " ")
+                    if t.get("summary"):
+                        thread_lines.append(
+                            f"- #{t['channel']} — {outcome_label}: {t['summary']}"
+                        )
+                    else:
+                        thread_lines.append(
+                            f"- #{t['channel']} — {outcome_label}"
+                        )
+                prior_parts.append(f"**{agent_label}**\n" + "\n".join(thread_lines))
+            prior_text = "\n\n".join(prior_parts)
+        else:
+            prior_text = "(none)"
+
         prompt_text = phase5_template.replace("{interesting_posts}", interesting_text)
         prompt_text = prompt_text.replace("{subscribed_channels}", channels_text)
         prompt_text = prompt_text.replace("{your_recent_posts}", recent_text)
+        prompt_text = prompt_text.replace("{prior_conversations}", prior_text)
 
         # Inject pre-loaded FOA details for Option B (funding collaborations)
         if thread_foa_contexts:

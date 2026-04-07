@@ -122,6 +122,10 @@ class SimulationEngine:
         # Closed thread IDs — prevents Phase 3 from re-activating decided threads
         self._closed_thread_ids: set[str] = set()
 
+        # Prior thread decisions per agent pair — for Phase 5 dedup context.
+        # Key: tuple(sorted([agent_a, agent_b])), Value: list of dicts
+        self._prior_threads: dict[tuple[str, str], list[dict]] = {}
+
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
@@ -710,6 +714,14 @@ class SimulationEngine:
         """Close a thread and log the decision."""
         thread.status = "closed"
         self._closed_thread_ids.add(thread.thread_id)
+
+        # Track for Phase 5 dedup context
+        pair_key = tuple(sorted([agent.agent_id, thread.other_agent_id]))
+        self._prior_threads.setdefault(pair_key, []).append({
+            "channel": thread.channel,
+            "outcome": outcome,
+            "summary": (summary_text or "")[:400] or None,
+        })
         # Remove from active threads
         agent.state.active_threads.pop(thread.thread_id, None)
 
@@ -770,6 +782,15 @@ class SimulationEngine:
             if summary_text:
                 other_event += f". Summary: {summary_text[:200]}"
             await self._update_agent_memory(other_agent, other_event)
+
+    def _get_prior_threads_for_agent(self, agent_id: str) -> dict[str, list[dict]]:
+        """Return {other_agent_id: [thread summaries]} for all prior conversations."""
+        result: dict[str, list[dict]] = {}
+        for (a, b), threads in self._prior_threads.items():
+            if agent_id in (a, b):
+                other = b if a == agent_id else a
+                result[other] = threads
+        return result
 
     # ------------------------------------------------------------------
     # Phase 5: New Post (conditional)
@@ -865,10 +886,14 @@ class SimulationEngine:
                 if foa_text:
                     thread_foa_contexts[ts.foa_number] = foa_text
 
+        # Prior conversations for dedup — all closed threads grouped by other agent
+        prior_threads = self._get_prior_threads_for_agent(agent.agent_id)
+
         system_prompt, messages = agent.build_phase5_prompt(
             recent_posts=recent_posts,
             foa_contexts=foa_contexts,
             thread_foa_contexts=thread_foa_contexts,
+            prior_threads=prior_threads,
         )
 
         # Restore
@@ -1586,16 +1611,22 @@ class SimulationEngine:
         )
 
         # 2. Rebuild active_threads per agent
-        # Get all closed thread IDs from thread_decisions
+        # Get all closed thread IDs and prior thread summaries from thread_decisions
         closed_thread_ids: set[str] = set()
         if self.session_factory:
             try:
                 from sqlalchemy import select as sa_select
                 async with self.session_factory() as db:
-                    result = await db.execute(
-                        sa_select(ThreadDecision.thread_id)
-                    )
-                    closed_thread_ids = {r[0] for r in result}
+                    result = await db.execute(sa_select(ThreadDecision))
+                    all_decisions = result.scalars().all()
+                    for td in all_decisions:
+                        closed_thread_ids.add(td.thread_id)
+                        pair_key = tuple(sorted([td.agent_a, td.agent_b]))
+                        self._prior_threads.setdefault(pair_key, []).append({
+                            "channel": td.channel,
+                            "outcome": td.outcome,
+                            "summary": (td.summary_text or "")[:400] or None,
+                        })
                     self._closed_thread_ids.update(closed_thread_ids)
             except Exception as exc:
                 logger.warning("Failed to load thread decisions: %s", exc)

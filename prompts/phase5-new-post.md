@@ -20,6 +20,17 @@ do not post about it again.
 
 {your_recent_posts}
 
+## Prior conversations with other labs
+
+These are your completed threads with other labs — proposals agreed, conversations that ended
+without a proposal, and threads that timed out. **Do NOT start a new conversation that covers
+substantially the same scientific ground as a prior conversation with the same lab.** "Unblocked"
+means you can pursue new topics, not re-pitch the same collaboration. If you want to extend a
+prior collaboration, propose a clearly distinct angle — different scientific question, different
+data, different experimental approach.
+
+{prior_conversations}
+
 ## Instructions
 
 Choose ONE action:
