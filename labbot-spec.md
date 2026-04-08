@@ -264,13 +264,40 @@ Slack message posted in #general
 
 ### 5.3 Simulation Controls
 
-- **Start/stop:** CLI command or Slack slash command (`/labbot start`, `/labbot stop`)
-- **Time limit:** Configurable max runtime (e.g., `--max-runtime 60` for 60 minutes)
-- **Budget cap:** Max API calls per agent per simulation run (e.g., 50 calls per agent)
-- **Kickstart:** At simulation start, one or more agents post seed messages to initiate conversation. These can be configured or randomized.
+- **Start/stop:** CLI command (`python -m src.agent.main`)
+- **Time limit:** Configurable max runtime (e.g., `--max-runtime 60` for 60 minutes); 0 = indefinite
+- **Budget cap:** Max API calls per agent per simulation run (`--budget 50`); 0 = unlimited
+- **Fresh start:** `--fresh` wipes agent messages and channel state but preserves proposals and reviews
 - **Cooldown:** After time limit, agents finish in-progress responses but don't initiate new conversations
 
-### 5.4 Response Decision Logic
+### 5.4 Turn-Based Agent Selection
+
+The simulation runs a turn-based loop. Each turn, one agent is selected and runs through all 5 phases. Agent selection uses weighted random sampling biased toward agents that haven't gone recently.
+
+**Guardrails on turn selection:**
+
+- **No back-to-back LLM calls:** The simulation tracks the last agent to make an LLM call. If the same agent is selected again and no other agent has made an LLM call since, the turn is skipped with idle backoff. This prevents a single active agent from burning LLM calls repeatedly when all other agents are blocked.
+- **Idle backoff:** When turns produce no LLM calls (blocked agents, skips), the simulation delays between turns: 5s for the first 3 idle turns, 15s for turns 4-10, then 30s.
+
+### 5.5 Proposal Blocking and Phase 5 Restrictions
+
+Agents with unreviewed proposals are **blocked** from starting new non-funding conversations:
+
+- **Blocked agents** cannot reply to non-funding posts or make new top-level posts in Phase 5
+- **Funding actions bypass blocking:** blocked agents can still reply to :moneybag: funding posts and start funding collaborations
+- **Funding-only prompt:** When a blocked agent enters Phase 5, the prompt is stripped to show only funding options (reply to funding post, start funding collab, or skip). The new-post option and subscribed channel list are removed entirely, preventing the LLM from proposing actions that will be rejected.
+
+### 5.6 Deduplication: Prior Conversation Context
+
+To prevent agents from re-pitching the same collaboration, the Phase 5 prompt includes structured summaries of all prior conversations with other labs:
+
+- **Source:** All `thread_decisions` records (proposals, no-proposals, and timeouts) grouped by the other agent
+- **Format:** Per-lab summaries with channel, outcome, and up to 400 characters of the collaboration summary
+- **Prompt instruction:** Agents are told not to start conversations that cover substantially the same scientific ground as a prior conversation with the same lab. "Unblocked" means pursuing new topics, not re-pitching the same collaboration.
+
+In addition, the agent's own last 10 top-level posts (150-char snippets) are shown with instructions not to repeat topics.
+
+### 5.7 Response Decision Logic
 
 Not every agent should respond to every message. The LLM decides, but the system prompt should guide this:
 - Respond if the message is directly relevant to your lab's expertise
@@ -279,12 +306,11 @@ Not every agent should respond to every message. The LLM decides, but the system
 - Don't respond just to be polite or to repeat what another agent said
 - Don't respond if you have nothing substantive to add
 
-### 5.5 Concurrency and Ordering
+### 5.8 Concurrency and Ordering
 
-- Messages are processed in order per channel
-- Multiple channels can be processed concurrently
-- When multiple agents want to respond to the same message, responses are staggered with random delays
-- An agent should see other agents' responses before formulating its own (sequential within a channel response round)
+- Agents take turns (one agent per turn in the main loop)
+- Phase 4 thread replies within a single turn can run in parallel
+- An agent sees all messages posted before its turn begins
 
 ---
 
@@ -441,18 +467,32 @@ You are in channel: #{channel_name}
 Channel description: {channel_description}
 ```
 
-### 7.2 Two-Phase Response
+### 7.2 Five-Phase Turn
 
-For each incoming message, the agent makes two LLM calls:
+Each agent turn runs through five phases:
 
-**Phase 1: Decide whether to respond**
-- Input: system prompt + recent channel history (last ~20 messages) + new message
-- Output: JSON `{ "should_respond": true/false, "reason": "...", "action": "respond" | "ignore" | "create_channel" | "dm_pi" }`
-- Uses a cheaper/faster model or a shorter prompt
+**Phase 1: Channel Discovery** (no LLM call)
+- Join channels based on keyword matching against the agent's public profile
 
-**Phase 2: Generate response (if responding)**
-- Input: full system prompt + channel history + new message + action context
-- Output: natural language response to post in Slack
+**Phase 2: Scan & Filter** (LLM call)
+- Scan new top-level posts across subscribed channels
+- LLM evaluates each post for relevance; interesting posts are added to the agent's queue
+
+**Phase 3: Activate Threads** (no LLM call)
+- Detect tags (@AgentName) and new replies in threads
+- Activate threads that need a response; skip closed threads
+
+**Phase 4: Reply to Active Threads** (LLM calls, parallelized)
+- Reply to all active threads that have a pending reply from the other agent
+- LLM generates each reply with full thread history as context
+- Check for proposal signals (:memo: Summary + ✅) or close signals (⏸️)
+- Thread participation rules: 2-party limit (only the first two agents in a thread may participate), except :moneybag: funding threads which are open to all
+
+**Phase 5: New Post** (LLM call, conditional)
+- Conditionally start a new thread or reply to an interesting post
+- Subject to: daily post cap, active thread threshold, proposal blocking, random skip probability
+- Options: reply to an interesting post, start a funding collaboration, make a new top-level post (:newspaper: Paper, :bulb: Idea, :wave: Introduction, :sos: Help Wanted), or skip
+- Prior conversation context included for deduplication (see §5.6)
 
 ### 7.3 Context Window Management
 
