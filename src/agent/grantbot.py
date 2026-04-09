@@ -367,6 +367,13 @@ async def run_grantbot(
                 logger.debug("Detail fetch failed for %s: %s", num, exc)
         detailed_opps.append(opp)
 
+    # 6b. Cache FOA details locally for agent access
+    from src.agent.foa_cache import cache_foa
+    for opp in detailed_opps:
+        opp_num = opp.get("number", "")
+        if opp_num:
+            cache_foa(opp_num, opp)
+
     # 7. Draft posts using LLM
     drafted: list[dict] = []
     for opp in detailed_opps:
@@ -408,6 +415,11 @@ async def run_grantbot(
         opp_num = opp.get("number", "unknown")
         post_text = item.get("post_text", "")
         target_channel = item.get("channel", "funding-opportunities")
+
+        # Skip if already posted (guards against duplicate FOAs in a single run)
+        if opp_num in posted:
+            logger.info("Skipping duplicate FOA %s (already posted)", opp_num)
+            continue
 
         # Build the full post
         close_date = opp.get("close_date", "Not specified")

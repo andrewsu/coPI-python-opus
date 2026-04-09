@@ -197,11 +197,6 @@ async def _run_simulation(
                     run.total_messages = sum(a.message_count for a in agents)
                     await db.commit()
 
-        # Update working memories
-        if session_factory and simulation_run_id:
-            logger.info("Updating agent working memories...")
-            await sim_engine.update_all_working_memories()
-
         logger.info("Simulation stopped.")
         logger.info(
             "Summary: %s",

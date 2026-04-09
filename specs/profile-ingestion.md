@@ -2,14 +2,13 @@
 
 ## Overview
 
-The pipeline builds a ResearcherProfile from three sources: ORCID (profile, grants, publications), PubMed (abstracts, optionally full-text methods), and user-submitted content. It produces structured profile fields via LLM synthesis.
+The pipeline builds a ResearcherProfile from two sources: ORCID (profile, grants, publications) and PubMed (abstracts, optionally full-text methods). It produces structured profile fields via LLM synthesis. On first generation, it also seeds a private profile (agent instructions) for user review.
 
 ## Triggers
 
 | Trigger | Behavior |
 |---|---|
-| User creates account with ORCID | Full pipeline |
-| User adds/modifies/deletes submitted text | Re-synthesize profile (don't re-fetch publications unless stale) |
+| User creates account with ORCID | Full pipeline (includes private profile seed) |
 | User clicks "refresh profile" | Full pipeline |
 | Monthly cron detects new ORCID works | Generate candidate profile, notify user if arrays changed |
 | Admin seeds profile with ORCID ID | Full pipeline (no user interaction) |
@@ -88,9 +87,11 @@ Fetch methods sections from PMC for open-access papers to extract specific techn
 
 Deep mining is on by default. It is slower (minutes vs seconds) but produces significantly more specific profiles, which directly improves matching engine output quality.
 
-### Step 6: Collect User-Submitted Texts
+### Step 6: Seed Private Profile (First Generation Only)
 
-Retrieve any user-submitted texts from the profile. These are stored as `user_submitted_texts` on ResearcherProfile — an array of {label, content, submitted_at} objects.
+On first profile generation (no existing `private_profile_md`), use the LLM to generate a draft private profile (agent instructions) based on the researcher's publications, grants, and research summary. The seed is stored in `private_profile_seed` on ResearcherProfile and presented to the user for review and editing during onboarding step 4. Once the user saves, the content is promoted to `private_profile_md` and written to `profiles/private/{agent_id}.md`.
+
+This step is skipped on profile refreshes and re-generations — the user's existing private profile is preserved.
 
 ### Step 7: LLM Synthesis
 
@@ -118,21 +119,16 @@ Methods Sections (where available):
 - From "[paper title]":
   [methods text excerpt]
 - ...
-
-User-Submitted Texts:
-- [label]: [content]
-- ...
 ```
 
 **Prompt instructions for synthesis:**
 
 - Generate a research summary of 150-250 words as a narrative that connects themes, not a list of topics
-- Weight user-submitted text as reflecting current priorities — it may diverge from the publication record
 - Weight recent publications more heavily than older ones
 - Be specific: "CRISPR-Cas9 screening in K562 cells" not just "CRISPR"
 - For computational labs, list databases and computational resources as experimental models
 - Extract specific molecular targets, not just pathways
-- Do NOT quote or reference user-submitted text directly in any output — the profile must be justifiable from publicly available information
+- The profile must be justifiable from publicly available information
 
 **Output schema:**
 
@@ -213,7 +209,7 @@ For computational/bioinformatics labs:
 ### Sparse ORCID Data
 If ORCID has minimal works:
 - Nudge user to update ORCID
-- Profile can still be generated from grants + any available publications + user-submitted text
+- Profile can still be generated from grants + any available publications
 - Flag profile as potentially incomplete
 
 ### Publications Without PMIDs

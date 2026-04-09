@@ -20,6 +20,8 @@ Agent profiles and working memory are stored as **filesystem markdown files**, n
 | orcid | string | Unique, required (ORCID OAuth is the only auth method) |
 | is_admin | boolean | Default false |
 | email_notifications_enabled | boolean | Default true |
+| email_notification_frequency | string(20) | Default `'weekly'`. Values: daily, twice_weekly, weekly, biweekly, off. |
+| email_notifications_paused_by_system | boolean | Default false. True when auto-downgrade reaches `off`. |
 | onboarding_complete | boolean | Default false. True after user reviews profile on first login. |
 | claimed_at | timestamp | Nullable. Set when a seeded profile is claimed via ORCID login. |
 | created_at | timestamp | |
@@ -42,7 +44,8 @@ One per user. Contains LLM-synthesized fields and user-submitted content.
 | key_targets | text[] | Array of strings |
 | keywords | text[] | Array of strings |
 | grant_titles | text[] | Array of strings, from ORCID |
-| user_submitted_texts | jsonb | [{label, content, submitted_at}]. Max 5 entries, each max 2000 words. |
+| private_profile_md | text | Nullable. The live private profile (agent instructions), editable by user via web UI or by agent via PI DM. |
+| private_profile_seed | text | Nullable. LLM-generated draft private profile staged for user review during onboarding. |
 | profile_version | integer | Increments on each regeneration or manual edit |
 | profile_generated_at | timestamp | When the LLM last synthesized this profile |
 | raw_abstracts_hash | string | Hash of source abstracts to detect changes |
@@ -50,8 +53,6 @@ One per user. Contains LLM-synthesized fields and user-submitted content.
 | pending_profile_created_at | timestamp | Nullable. |
 | created_at | timestamp | |
 | updated_at | timestamp | |
-
-**User-submitted text privacy:** User-submitted texts are NEVER shown to other users or agents. They inform profile synthesis only.
 
 **Direct editing:** Users can edit all synthesized fields (research_summary, techniques, experimental_models, disease_areas, key_targets, keywords). Edits bump `profile_version`. Grant titles are from ORCID and not directly editable.
 
@@ -106,6 +107,7 @@ One per agent. Links agents to users and stores Slack credentials and lifecycle 
 | slack_bot_token | text | Nullable. Bot token for this agent's Slack app |
 | slack_app_token | text | Nullable. App-level token (stored but not actively used) |
 | slack_user_id | string(50) | Nullable. PI's Slack user ID for DM and identity matching |
+| delegate_slack_ids | text[] | Nullable. Array of Slack user IDs granted delegate access by the primary PI. Delegates have full PI powers except managing other delegates. |
 | requested_at | timestamp | When agent was requested |
 | approved_at | timestamp | Nullable. When admin approved |
 | approved_by | FK → User | Nullable. Which admin approved |
@@ -137,12 +139,63 @@ Stores PI/agent reviews of collaboration proposals.
 | id | uuid | Primary key |
 | thread_decision_id | FK → ThreadDecision | |
 | agent_id | string(50) | Agent that reviewed |
-| user_id | FK → User | PI who reviewed |
-| rating | smallint | 1-4 rating |
+| user_id | FK → User | PI (agent owner) |
+| delegate_user_id | FK → User | Nullable. If reviewed by a delegate, records which delegate. |
+| reviewed_by_user_id | FK → User | Nullable. The actual reviewer (PI or delegate). Null = PI for backward compat. |
+| rating | smallint | 1-4 rating (0 = reopened with guidance) |
 | comment | text | Nullable |
+| submitted_via | string(10) | Default `'web'`. Values: web, email. |
 | reviewed_at | timestamp | |
 
 **Constraint:** Unique on (thread_decision_id, agent_id) — each agent reviews a thread decision once.
+
+### EmailNotification
+
+Tracks each proposal notification email sent. See `email-proposal-review.md` for full spec.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | uuid | Primary key |
+| user_id | FK → User | Recipient |
+| thread_decision_id | FK → ThreadDecision | The proposal |
+| agent_registry_id | FK → AgentRegistry | The agent this proposal belongs to |
+| reply_token | string(64) | Unique, cryptographically random. Used in reply-to address. |
+| status | string(20) | Default `'sent'`. Values: sent, responded, expired. |
+| response_type | string(20) | Nullable. Values: review, instruction, unparseable. |
+| sent_at | timestamp | |
+| responded_at | timestamp | Nullable |
+| created_at | timestamp | |
+
+**Constraints:** `reply_token` unique and indexed. Unique on `(user_id, thread_decision_id)`.
+
+### EmailEngagementTracker
+
+Tracks per-user email engagement for auto-downgrade logic. One row per user.
+
+| Field | Type | Notes |
+|---|---|---|
+| user_id | FK → User | Primary key |
+| consecutive_missed | integer | Default 0. Incremented per notification sent without engagement. |
+| last_engagement_at | timestamp | Nullable |
+| last_notification_sent_at | timestamp | Nullable |
+| last_downgrade_at | timestamp | Nullable |
+
+### ProfileRevision
+
+Tracks every change to public profiles, private profiles, and working memory. See `profile-versioning.md` for full spec.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | uuid | Primary key |
+| agent_registry_id | FK → AgentRegistry | Which agent's profile was changed |
+| profile_type | string(10) | `public`, `private`, or `memory` |
+| content | text | Full markdown snapshot after the change |
+| changed_by_user_id | FK → User | Nullable. The human who initiated the change. Null for agent/system changes. |
+| mechanism | string(20) | `web`, `slack_dm`, `agent`, `pipeline`, or `monthly_refresh` |
+| change_summary | text | Nullable. Brief description of what changed. |
+| created_at | timestamp | |
+
+**Index:** `(agent_registry_id, profile_type, created_at DESC)` for fast history lookup.
 
 ### SimulationRun
 
@@ -232,7 +285,7 @@ profiles/
 
 **Public profile** — exported from ResearcherProfile database record to markdown. Contains research areas, methods, model systems, active projects, open questions, resources.
 
-**Private profile** — PI behavioral instructions: collaboration preferences, communication style, topic priorities. Updated by the agent when PI sends standing instructions via DM (optimistic rewrite with async PI review).
+**Private profile** — PI behavioral instructions: collaboration preferences, communication style, topic priorities. Seeded by the LLM during onboarding (user reviews and edits before saving). After onboarding, editable by the user via web UI at copi.science/agent/profile/edit or by the agent when PI sends standing instructions via DM (optimistic rewrite, agent echoes full updated profile). Persisted to both the database (`private_profile_md` column) and the filesystem.
 
 **Working memory** — Agent's synthesized understanding of its current state. Updated by the agent after each simulation run. Not a raw log — a living summary of priorities, recent explorations, and lessons learned.
 

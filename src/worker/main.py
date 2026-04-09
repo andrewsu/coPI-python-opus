@@ -121,6 +121,9 @@ async def run_worker():
 
     logger.info("Worker started, polling every %ds", settings.worker_poll_interval)
 
+    last_notification_check = 0.0
+    last_inbound_check = 0.0
+
     while not _shutdown:
         try:
             async with session_factory() as db:
@@ -132,6 +135,27 @@ async def run_worker():
             else:
                 # No jobs, sleep before polling again
                 await asyncio.sleep(settings.worker_poll_interval)
+
+            # Email notification check (throttled)
+            now = asyncio.get_event_loop().time()
+            if now - last_notification_check >= settings.notification_check_interval:
+                last_notification_check = now
+                try:
+                    from src.services.email_notifications import check_and_send_notifications
+                    sent = await check_and_send_notifications(session_factory)
+                    if sent:
+                        logger.info("Sent %d proposal notification email(s)", sent)
+                except Exception as exc:
+                    logger.error("Notification check error: %s", exc, exc_info=True)
+
+            # Inbound email check (throttled)
+            if now - last_inbound_check >= settings.inbound_poll_interval:
+                last_inbound_check = now
+                try:
+                    from src.services.email_inbound import poll_inbound_emails
+                    await poll_inbound_emails(session_factory)
+                except Exception as exc:
+                    logger.error("Inbound email check error: %s", exc, exc_info=True)
 
         except Exception as exc:
             logger.error("Worker loop error: %s", exc, exc_info=True)

@@ -11,6 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_db
 from src.dependencies import get_current_user
 from src.models import Job, ResearcherProfile, User
+from src.services.profile_export import (
+    ORCID_TO_AGENT_ID,
+    PRIVATE_PROFILES_DIR,
+    export_private_profile,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -106,20 +111,44 @@ async def save_profile(
 
     await db.commit()
 
-    # Export to markdown for agent consumption
+    # Export to markdown for agent consumption (include publications)
     from src.services.profile_export import export_profile_to_markdown
-    export_profile_to_markdown(current_user, profile)
+    from src.models import Publication
+    pub_result = await db.execute(
+        select(Publication).where(Publication.user_id == current_user.id)
+    )
+    user_pubs = list(pub_result.scalars().all())
+    exported_path = export_profile_to_markdown(current_user, profile, publications=user_pubs)
 
-    return RedirectResponse(url="/onboarding/add-texts", status_code=302)
+    # Record revision
+    from src.services.profile_versioning import create_revision
+    from src.models import AgentRegistry
+    agent_result = await db.execute(
+        select(AgentRegistry).where(AgentRegistry.user_id == current_user.id)
+    )
+    agent_reg = agent_result.scalar_one_or_none()
+    if agent_reg and exported_path:
+        await create_revision(
+            db,
+            agent_registry_id=agent_reg.id,
+            profile_type="public",
+            content=exported_path.read_text(encoding="utf-8"),
+            changed_by_user_id=current_user.id,
+            mechanism="web",
+            change_summary="Profile saved during onboarding",
+        )
+        await db.commit()
+
+    return RedirectResponse(url="/onboarding/private-profile", status_code=302)
 
 
-@router.get("/add-texts", response_class=HTMLResponse)
-async def add_texts(
+@router.get("/private-profile", response_class=HTMLResponse)
+async def private_profile(
     request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Step 4: add user-submitted texts."""
+    """Step 4: review and edit seeded private profile."""
     if current_user.onboarding_complete:
         return RedirectResponse(url="/profile", status_code=302)
 
@@ -128,11 +157,99 @@ async def add_texts(
     )
     profile = profile_result.scalar_one_or_none()
 
+    # Show the best available content: DB live profile → DB seed → on-disk file → default template
+    content = ""
+    if profile:
+        content = profile.private_profile_md or profile.private_profile_seed or ""
+
+    # Fall back to existing on-disk private profile (e.g. pilot labs that were
+    # set up before the user claimed their account via ORCID login).
+    if not content:
+        agent_id = ORCID_TO_AGENT_ID.get(current_user.orcid)
+        if agent_id:
+            disk_path = PRIVATE_PROFILES_DIR / f"{agent_id}.md"
+            if disk_path.exists():
+                content = disk_path.read_text(encoding="utf-8").strip()
+
+    # For brand-new users with no existing profile anywhere, seed with the
+    # standard section template so they aren't staring at a blank page.
+    if not content:
+        lab_name = current_user.name or "My"
+        content = f"""# {lab_name} Lab — Private Profile
+
+## PI Behavioral Instructions
+
+### Collaboration Preferences
+- Add preferences here: what kinds of collaborations interest you, and what would you rather not pursue?
+
+### Communication Style
+- Add guidance for how your agent should communicate on your behalf (e.g. tone, what to emphasize or avoid).
+
+### Topic Priorities
+- No specific priority ordering yet. Add priorities here to guide which opportunities your agent pursues first.
+
+### Criteria to Always Explore
+- No specific criteria yet. Add questions or checks your agent should always ask when evaluating collaborations."""
+
     return templates.TemplateResponse(
         request,
-        "onboarding/add_texts.html",
-        _template_context(request, current_user, profile=profile),
+        "onboarding/private_profile.html",
+        _template_context(request, current_user, profile=profile, profile_content=content),
     )
+
+
+@router.post("/private-profile")
+async def save_private_profile(
+    request: Request,
+    content: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Save the private profile from onboarding step 4."""
+    profile_result = await db.execute(
+        select(ResearcherProfile).where(ResearcherProfile.user_id == current_user.id)
+    )
+    profile = profile_result.scalar_one_or_none()
+    if not profile:
+        profile = ResearcherProfile(user_id=current_user.id)
+        db.add(profile)
+
+    profile.private_profile_md = content.strip() or None
+    profile.private_profile_seed = None  # Clear seed after user saves
+
+    # Mark onboarding complete
+    current_user.onboarding_complete = True
+
+    await db.commit()
+
+    # Export to disk
+    export_private_profile(current_user, profile)
+
+    # Record revision
+    from src.services.profile_versioning import create_revision
+    from src.models import AgentRegistry
+    agent_result = await db.execute(
+        select(AgentRegistry).where(AgentRegistry.user_id == current_user.id)
+    )
+    agent_reg = agent_result.scalar_one_or_none()
+    if agent_reg and content.strip():
+        await create_revision(
+            db,
+            agent_registry_id=agent_reg.id,
+            profile_type="private",
+            content=content.strip(),
+            changed_by_user_id=current_user.id,
+            mechanism="web",
+            change_summary="Private profile saved during onboarding",
+        )
+        await db.commit()
+
+    # Check for pending invite token
+    pending_token = request.session.pop("pending_invite_token", None)
+    if pending_token:
+        return RedirectResponse(url=f"/invite/{pending_token}", status_code=302)
+
+    return RedirectResponse(url="/profile?onboarding_complete=1", status_code=302)
 
 
 @router.post("/complete")
@@ -144,6 +261,11 @@ async def complete_onboarding(
     """Mark onboarding as complete."""
     current_user.onboarding_complete = True
     await db.commit()
+
+    pending_token = request.session.pop("pending_invite_token", None)
+    if pending_token:
+        return RedirectResponse(url=f"/invite/{pending_token}", status_code=302)
+
     return RedirectResponse(url="/profile?onboarding_complete=1", status_code=302)
 
 

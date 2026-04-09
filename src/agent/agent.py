@@ -101,6 +101,54 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
 {self.working_memory if self.working_memory else "*No working memory yet — this is your first simulation.*"}
 {lab_directory_section}"""
 
+    def build_scan_system_prompt(self) -> str:
+        """Build a lightweight system prompt for scan/filter phases.
+
+        Omits working memory and lab directory — scan only needs identity,
+        research focus, and private priorities to judge relevance.
+        """
+        base_prompt = self._load_file(
+            PROMPTS_DIR / "agent-system.md",
+            _default_system_prompt(),
+        )
+        return f"""{base_prompt}
+
+## Your Identity
+You are **{self.bot_name}**, the AI agent representing the {self.pi_name} lab at Scripps Research.
+Your agent ID is "{self.agent_id}". When communicating, represent your lab professionally.
+
+## Your Lab Profile (Public)
+{self.public_profile}
+
+## Your Private Instructions
+{self.private_profile}"""
+
+    def build_thread_reply_system_prompt(self) -> str:
+        """Build a system prompt for thread replies.
+
+        Omits lab directory — by mid-conversation you already know who you're
+        talking to. Use retrieve_profile tool if you need details on another lab.
+        Includes working memory since it may contain thread-relevant context.
+        """
+        base_prompt = self._load_file(
+            PROMPTS_DIR / "agent-system.md",
+            _default_system_prompt(),
+        )
+        return f"""{base_prompt}
+
+## Your Identity
+You are **{self.bot_name}**, the AI agent representing the {self.pi_name} lab at Scripps Research.
+Your agent ID is "{self.agent_id}". When communicating, represent your lab professionally.
+
+## Your Lab Profile (Public)
+{self.public_profile}
+
+## Your Private Instructions
+{self.private_profile}
+
+## Your Working Memory
+{self.working_memory if self.working_memory else "*No working memory yet — this is your first simulation.*"}"""
+
     # ------------------------------------------------------------------
     # Phase 2: Scan & Filter prompt
     # ------------------------------------------------------------------
@@ -112,7 +160,7 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
         new_posts: list of {post_id, channel, sender, content_snippet}
         Returns (system_prompt, messages).
         """
-        system_prompt = self.build_system_prompt()
+        system_prompt = self.build_scan_system_prompt()
         phase2_template = self._load_file(
             PROMPTS_DIR / "phase2-scan-filter.md",
             "Evaluate posts and return JSON with selected_post_ids.",
@@ -130,7 +178,7 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
 
     def build_phase2_prune_prompt(self) -> tuple[str, list[dict]]:
         """Build system + messages for Phase 2 prune."""
-        system_prompt = self.build_system_prompt()
+        system_prompt = self.build_scan_system_prompt()
         prune_template = self._load_file(
             PROMPTS_DIR / "phase2-prune.md",
             "Prune interesting_posts to ≤20. Return JSON with keep_post_ids.",
@@ -162,7 +210,7 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
         thread_history: list of {sender, content} dicts.
         Returns (system_prompt, messages).
         """
-        system_prompt = self.build_system_prompt()
+        system_prompt = self.build_thread_reply_system_prompt()
         phase4_template = self._load_file(
             PROMPTS_DIR / "phase4-thread-reply.md",
             "Compose a thread reply.",
@@ -234,6 +282,7 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
         prompt_text = prompt_text.replace("{thread_history}", history_text)
         prompt_text = prompt_text.replace("{phase_guidance}", phase_guidance)
         prompt_text = prompt_text.replace("{instructions}", instructions)
+        prompt_text = prompt_text.replace("{foa_number}", thread.foa_number or "none")
 
         messages = [{"role": "user", "content": prompt_text}]
         return system_prompt, messages
@@ -245,10 +294,21 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
     def build_phase5_prompt(
         self,
         recent_posts: list[dict[str, str]] | None = None,
+        foa_contexts: dict[str, str] | None = None,
+        thread_foa_contexts: dict[str, str] | None = None,
+        prior_threads: dict[str, list[dict]] | None = None,
+        funding_only: bool = False,
     ) -> tuple[str, list[dict]]:
         """
         Build system + messages for Phase 5 new post.
         recent_posts: [{channel, content_snippet}] — agent's own recent top-level posts.
+        foa_contexts: {post_id: formatted_foa_text} — pre-loaded FOA details for funding posts.
+        thread_foa_contexts: {foa_number: formatted_foa_text} — FOAs from active threads
+            available for Option B (starting a funding collaboration).
+        prior_threads: {other_agent_id: [{channel, outcome, summary}]} — all closed threads
+            grouped by other agent, for dedup context.
+        funding_only: if True, strip prompt to funding actions only (agent is blocked for
+            regular posts but has funding posts available).
         Returns (system_prompt, messages).
         """
         system_prompt = self.build_system_prompt()
@@ -257,12 +317,15 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
             "Choose to reply to an interesting post or make a new top-level post.",
         )
 
-        # Format interesting posts
+        # Format interesting posts, injecting FOA details for funding posts
         if self.state.interesting_posts:
-            interesting_text = "\n\n".join(
-                f"**Post ID: {p.post_id}** in #{p.channel} by {p.sender_agent_id}:\n{p.content_snippet}"
-                for p in self.state.interesting_posts
-            )
+            parts = []
+            for p in self.state.interesting_posts:
+                part = f"**Post ID: {p.post_id}** in #{p.channel} by {p.sender_agent_id}:\n{p.content_snippet}"
+                if foa_contexts and p.post_id in foa_contexts:
+                    part += f"\n\n<foa_details foa_number=\"{p.foa_number}\">\n{foa_contexts[p.post_id]}\n</foa_details>"
+                parts.append(part)
+            interesting_text = "\n\n".join(parts)
         else:
             interesting_text = "(none)"
 
@@ -278,9 +341,77 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
         else:
             recent_text = "(none)"
 
+        # Format prior conversations for dedup
+        if prior_threads:
+            prior_parts = []
+            for other_id in sorted(prior_threads):
+                agent_label = f"{other_id.capitalize()}Bot"
+                thread_lines = []
+                for t in prior_threads[other_id]:
+                    outcome_label = t["outcome"].replace("_", " ")
+                    if t.get("summary"):
+                        thread_lines.append(
+                            f"- #{t['channel']} — {outcome_label}: {t['summary']}"
+                        )
+                    else:
+                        thread_lines.append(
+                            f"- #{t['channel']} — {outcome_label}"
+                        )
+                prior_parts.append(f"**{agent_label}**\n" + "\n".join(thread_lines))
+            prior_text = "\n\n".join(prior_parts)
+        else:
+            prior_text = "(none)"
+
+        if funding_only:
+            # Strip prompt to funding-only actions: reply to funding posts,
+            # start a funding collab, or skip. Remove sections that would
+            # tempt the LLM into proposing regular posts that will be rejected.
+            import re
+            phase5_template = re.sub(
+                r"## Your subscribed channels\n.*?\n\{subscribed_channels\}\n",
+                "",
+                phase5_template,
+                flags=re.DOTALL,
+            )
+            phase5_template = re.sub(
+                r"## Your recent posts\n.*?\{your_recent_posts\}\n",
+                "",
+                phase5_template,
+                flags=re.DOTALL,
+            )
+            phase5_template = re.sub(
+                r"## Prior conversations with other labs\n.*?\{prior_conversations\}\n",
+                "",
+                phase5_template,
+                flags=re.DOTALL,
+            )
+            phase5_template = re.sub(
+                r"### Option C: Make a new top-level post\n.*?(?=### Option D:)",
+                "",
+                phase5_template,
+                flags=re.DOTALL,
+            )
+            # Replace intro text to clarify the constraint
+            phase5_template = phase5_template.replace(
+                "You have the opportunity to either reply to an interesting post or make a new top-level\n"
+                "post in one of your subscribed channels.",
+                "You have unreviewed proposals, so you can only take funding-related actions this turn.\n"
+                "Reply to a funding post, start a funding collaboration, or skip.",
+            )
+
         prompt_text = phase5_template.replace("{interesting_posts}", interesting_text)
         prompt_text = prompt_text.replace("{subscribed_channels}", channels_text)
         prompt_text = prompt_text.replace("{your_recent_posts}", recent_text)
+        prompt_text = prompt_text.replace("{prior_conversations}", prior_text)
+
+        # Inject pre-loaded FOA details for Option B (funding collaborations)
+        if thread_foa_contexts:
+            foa_section = "\n\n## Available FOA details for funding collaborations\n\n"
+            foa_section += "\n\n".join(
+                f"<foa_details foa_number=\"{foa_num}\">\n{foa_text}\n</foa_details>"
+                for foa_num, foa_text in thread_foa_contexts.items()
+            )
+            prompt_text += foa_section
 
         messages = [{"role": "user", "content": prompt_text}]
         return system_prompt, messages
@@ -300,7 +431,10 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
             logger.error("[%s] Failed to update working memory: %s", self.agent_id, exc)
 
     def update_private_profile(self, new_profile: str) -> None:
-        """Write private profile to profiles/private/{agent_id}.md."""
+        """Write private profile to profiles/private/{agent_id}.md (disk only).
+
+        For DB persistence, call persist_private_profile_to_db() afterward.
+        """
         profile_path = PROFILES_DIR / "private" / f"{self.agent_id}.md"
         try:
             profile_path.parent.mkdir(parents=True, exist_ok=True)
@@ -308,6 +442,30 @@ Your agent ID is "{self.agent_id}". When communicating, represent your lab profe
             self._private_profile = None  # Invalidate cache
         except Exception as exc:
             logger.error("[%s] Failed to update private profile: %s", self.agent_id, exc)
+
+    async def persist_private_profile_to_db(self, db: "AsyncSession") -> None:
+        """Sync the on-disk private profile to the database."""
+        from sqlalchemy import select
+        from src.models import AgentRegistry, ResearcherProfile
+
+        try:
+            agent_result = await db.execute(
+                select(AgentRegistry).where(AgentRegistry.agent_id == self.agent_id)
+            )
+            agent_reg = agent_result.scalar_one_or_none()
+            if not agent_reg:
+                return
+            profile_result = await db.execute(
+                select(ResearcherProfile).where(
+                    ResearcherProfile.user_id == agent_reg.user_id
+                )
+            )
+            profile = profile_result.scalar_one_or_none()
+            if profile:
+                profile.private_profile_md = self.private_profile
+                await db.commit()
+        except Exception as exc:
+            logger.error("[%s] Failed to persist private profile to DB: %s", self.agent_id, exc)
 
     # ------------------------------------------------------------------
     # Helpers

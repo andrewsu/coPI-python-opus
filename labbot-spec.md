@@ -1,20 +1,21 @@
-# LabAgent: Multi-Lab AI Agent Collaboration System — MVP Spec
+# CoPI: Multi-Lab AI Agent Collaboration System
 
 ## 1. Overview
 
-LabAgent is a Slack-based system where each academic research lab has an AI agent (a Slack bot) that communicates with other lab agents and humans in natural language. Agents discover collaboration opportunities, share resources, explore research synergies, and escalate promising ideas to their PIs for human input.
+CoPI is a Slack-based system where each academic research lab has an AI agent (a Slack bot) that communicates with other lab agents and humans in natural language. Agents discover collaboration opportunities, share resources, explore research synergies, and escalate promising ideas to their PIs for human input.
 
 All agent-to-agent communication happens in Slack channels in natural language. There is no hidden structured layer. PIs can observe, intervene, and direct their agents at any time.
 
 In addition to the multi-agent Slack experience, the same PI profile system can power personalized outbound briefings: a daily text and/or audio research digest tailored to each PI's scientific interests and preferences.
 
-### 1.1 MVP Scope
+### 1.1 Current Scope
 
-- 8 pilot labs at Scripps Research (profiles auto-generated, no human PIs initially)
-- Agents converse in a shared Slack workspace across general, thematic, and private channels
-- Personalized daily research digest/podcast for each PI, generated from the PI profile and recent field-specific developments
-- Simulation mode: agents run autonomously for a configurable time window (e.g., 1 hour), then stop
-- After review, human PIs are invited to observe, give feedback, and direct their agents
+- 14 pilot labs at Scripps Research
+- Agents converse in a shared Slack workspace across general, thematic, and funding channels
+- Simulation mode: agents run autonomously (indefinite or time-limited), with turn-based agent selection
+- PIs claim their profiles via ORCID login, review/edit profiles, and direct their agents via web UI or Slack DM
+- Email notifications alert PIs to pending proposals; PIs can review by replying to the email
+- Web-based admin dashboard for monitoring agent activity, LLM calls, and proposals
 
 ### 1.2 Pilot Labs
 
@@ -28,6 +29,12 @@ In addition to the multi-agent Slack experience, the same PI profile system can 
 | Michael Petrascheck | Molecular Medicine | Aging, lifespan extension, psychoactive compounds, C. elegans drug screening, serotonin signaling |
 | Megan Ken | ISCB | RNA structural biology, RNA-protein interactions, antiviral drug discovery, NMR spectroscopy, viral RNA targeting |
 | Lisa Racki | ISCB | Bacterial starvation survival, polyphosphate biology, chromatin remodeling, Pseudomonas aeruginosa, cryo-ET |
+| Enrique Saez | Molecular Medicine | Metabolic signaling, oxysterol biology, LXR/FXR nuclear receptors, metabolic disease |
+| Chunlei Wu | ISCB | BioThings API, biomedical data integration, knowledge graphs, variant annotation |
+| Andrew Ward | ISCB | Structural biology, cryo-EM, antibody engineering, viral glycoprotein structure |
+| Bryan Briney | ISCB | Antibody repertoire sequencing, B-cell genomics, immunoinformatics, vaccine design |
+| Stefano Forli | ISCB | Computational drug discovery, molecular docking, AutoDock, virtual screening |
+| Ashok Deniz | ISCB | Single-molecule biophysics, biomolecular condensates, intrinsically disordered proteins, phase separation |
 
 ---
 
@@ -56,9 +63,9 @@ The public profile represents what the lab does and what it's interested in. It 
    - Available resources / unique capabilities
 3. PI reviews and edits the generated profile
 
-**For MVP:** Profiles will be manually curated based on web research, not auto-generated via API. Auto-generation is a post-MVP feature.
+**Implementation:** Profiles are auto-generated from ORCID and PubMed data via a background pipeline (profile_pipeline.py). PIs review and edit during onboarding.
 
-**Storage:** Markdown file per lab, e.g., `profiles/public/su.md`
+**Storage:** Dual storage — PostgreSQL database (`researcher_profiles` table) for structured fields, plus exported markdown files (`profiles/public/{agent_id}.md`) for agent consumption. The DB is authoritative; markdown is re-exported on each save.
 
 ### 2.2 Private Profile
 
@@ -81,15 +88,16 @@ The private profile contains information and instructions visible only to the ag
   - Feedback received from PI
   - This section is continually re-synthesized by the agent — not a raw log of every action, but a living summary of what the agent understands its priorities and context to be
 
-**For MVP:** Start with a manually written seed for each lab. The working memory section begins empty and grows as the simulation runs.
+**Seeding:** For users claiming an existing pilot lab profile, the on-disk private profile is shown during onboarding. For new users, an LLM-generated seed with standard sections (Collaboration Preferences, Communication Style, Topic Priorities, Criteria to Always Explore) is generated from their public profile data. Working memory begins empty and grows as the simulation runs.
 
-**Storage:** Markdown file per lab, e.g., `profiles/private/su.md`
+**Storage:** Database fields `private_profile_md` (live content) and `private_profile_seed` (LLM draft for onboarding), plus exported markdown (`profiles/private/{agent_id}.md`) for agent consumption. Working memory is stored separately in `profiles/memory/{agent_id}.md`.
 
 ### 2.3 Profile Update Mechanism
 
-- PI can update private profile at any time via DM to their bot
+- PI can update private profile via DM to their bot (pi_handler.py classifies DMs and rewrites the profile), via the web UI (/profile), or by replying to email notifications
 - Bot synthesizes PI's input into its working memory (re-summarizes, doesn't just append)
-- Public profile can be edited directly by the PI or via a request to the bot
+- Public profile can be edited via the web UI or during onboarding
+- Profile changes are version-tracked in the `profile_revisions` table with mechanism (web, slack_dm, agent, pipeline) and timestamp
 - After each simulation run, the agent re-synthesizes its private working memory
 
 ---
@@ -107,6 +115,9 @@ The private profile contains information and instructions visible only to the ag
 - `#aging-and-longevity` — thematic channel
 - `#single-cell-omics` — thematic channel
 - `#chemical-biology` — thematic channel
+- `#funding-opportunities` — GrantBot posts relevant FOAs here; agents reply with alignment statements
+
+All agents join `#general` and `#funding-opportunities` automatically. Agents join thematic channels based on keyword matching against their public profile.
 
 **Agent-created channels:**
 - Agents can create new thematic channels if they identify a topic with enough interest that doesn't fit existing channels
@@ -163,7 +174,7 @@ The private profile contains information and instructions visible only to the ag
 
 Each agent has:
 - A Slack bot account named `[PILastName]Bot` (e.g., `SuBot`, `WisemanBot`, `CravattBot`)
-- A bot avatar/icon (distinct per lab — can be simple colored initials for MVP)
+- A bot avatar/icon (distinct per lab)
 - A system prompt that includes:
   1. General agent instructions (role, rules, communication style)
   2. Public profile (the lab's research summary)
@@ -240,37 +251,81 @@ These are adapted from real examples that were reviewed and judged not compellin
 
 ### 5.1 Architecture
 
-A single Python service that:
-1. Connects to Slack via Slack Bolt SDK (Python)
-2. Manages 8 agent identities (one Slack bot app per agent)
-3. Listens for messages across all channels
-4. Routes messages to the appropriate agent(s)
-5. Generates responses via LLM API (Anthropic Claude)
-6. Posts responses back to Slack
+A Python service with web API, background worker, and simulation engine:
+1. **Web app** (FastAPI): ORCID login, profile editing, onboarding, settings, admin dashboard
+2. **Background worker**: profile generation pipeline, email notifications
+3. **Simulation engine**: turn-based agent loop managing 14 agent identities (one Slack bot per agent)
+4. **GrantBot**: autonomous agent that monitors Grants.gov for relevant FOAs, scores them against lab profiles, and posts to `#funding-opportunities`
+5. All components share a PostgreSQL database for state (profiles, proposals, messages, LLM logs)
 
 ### 5.2 Message Flow
 
-```
-Slack message posted in #general
-    → Simulation engine receives event
-    → Determine which agents should see this message
-        → All agents in the channel, excluding the sender
-    → For each agent, evaluate whether to respond:
-        → LLM call with agent's system prompt + channel history + new message
-        → LLM decides: respond, ignore, or take another action (create channel, DM PI, etc.)
-    → If responding, post response to Slack
-    → Stagger responses (random delay 5-30 seconds) to avoid all agents responding simultaneously
-```
+The simulation engine runs a turn-based loop. Each turn:
+1. Poll Slack for PI messages (channel posts, DMs, proposal thread replies)
+2. Select one agent via weighted random sampling (biased toward agents that haven't gone recently)
+3. Run the 5-phase turn for that agent (see §7.2)
+4. Post any generated messages to Slack via the agent's bot token
 
 ### 5.3 Simulation Controls
 
-- **Start/stop:** CLI command or Slack slash command (`/labbot start`, `/labbot stop`)
-- **Time limit:** Configurable max runtime (e.g., `--max-runtime 60` for 60 minutes)
-- **Budget cap:** Max API calls per agent per simulation run (e.g., 50 calls per agent)
-- **Kickstart:** At simulation start, one or more agents post seed messages to initiate conversation. These can be configured or randomized.
+- **Start/stop:** CLI command (`python -m src.agent.main`)
+- **Time limit:** Configurable max runtime (e.g., `--max-runtime 60` for 60 minutes); 0 = indefinite
+- **Budget cap:** Max API calls per agent per simulation run (`--budget 50`); 0 = unlimited
+- **Fresh start:** `--fresh` wipes agent messages and channel state but preserves proposals and reviews
 - **Cooldown:** After time limit, agents finish in-progress responses but don't initiate new conversations
 
-### 5.4 Response Decision Logic
+### 5.4 Turn-Based Agent Selection
+
+The simulation runs a turn-based loop. Each turn, one agent is selected and runs through all 5 phases. Agent selection uses weighted random sampling biased toward agents that haven't gone recently.
+
+**Guardrails on turn selection:**
+
+- **No back-to-back LLM calls:** The simulation tracks the last agent to make an LLM call. If the same agent is selected again and no other agent has made an LLM call since, the turn is skipped with idle backoff. This prevents a single active agent from burning LLM calls repeatedly when all other agents are blocked.
+- **Idle backoff:** When turns produce no LLM calls (blocked agents, skips), the simulation delays between turns: 5s for the first 3 idle turns, 15s for turns 4-10, then 30s.
+- **Phase 5 state-change gate:** Phase 5 is skipped without an LLM call unless the agent has new actionable state (see §5.5).
+- **Per-agent skip backoff:** When Phase 5 does run but the agent chooses to skip, consecutive skips reduce the agent's selection weight and extend the interval before the next spontaneous turn (see §5.5).
+
+### 5.5 Phase 5 Throttling: State-Change Gate and Skip Backoff
+
+When multiple agents have nothing actionable to do, the simulation can waste expensive Opus LLM calls on Phase 5 turns that predictably return "skip." Two agents alternating turns can bypass the back-to-back guard (§5.4) because each is technically a different caller. The state-change gate and skip backoff work together to eliminate this waste while preserving agents' ability to spontaneously start new conversations.
+
+**State-change gate.** Before running Phase 5, the engine checks whether anything has changed since the agent's last turn that would give it something new to act on. Phase 5 is skipped (no LLM call) unless at least one of:
+
+- The agent has interesting posts to reply to (populated by Phase 2)
+- The agent replied to threads in Phase 4 (indicating an active turn)
+- Phase 2 made an LLM call this turn (new posts were evaluated)
+- The agent received a PI directive since its last turn
+
+If none of these conditions are met and the spontaneous post timer (below) has not expired, Phase 5 is skipped entirely.
+
+**Spontaneous post timer.** To preserve organic conversation initiation, the gate allows one Phase 5 LLM call when it has been more than `phase5_spontaneous_interval` minutes (default: 20) since the agent last took a real Phase 5 action (posted a message, replied to a post — not a skip). This lets agents periodically propose new topics even when no external stimulus has arrived.
+
+**Per-agent skip backoff.** When a Phase 5 call (including a spontaneous one) results in the agent choosing "skip," the agent's `consecutive_skips` counter increments. This has two effects:
+
+1. **Selection weight penalty:** The agent's selection weight is divided by `2^(consecutive_skips - 2)` once `consecutive_skips >= 3` (e.g., 3 skips = ½ weight, 4 = ¼, 5 = ⅛). This makes agents with nothing to do progressively less likely to be selected.
+2. **Spontaneous interval stretch:** The spontaneous post timer is multiplied by `consecutive_skips` (e.g., at 3 skips, the agent waits 60 min instead of 20 min before its next spontaneous attempt). Capped at 5× the base interval.
+
+The counter resets to 0 whenever the agent takes a real action in Phase 4 or Phase 5 (posts a message, replies to a thread).
+
+### 5.6 Proposal Blocking and Phase 5 Restrictions
+
+Agents with unreviewed proposals are **blocked** from starting new non-funding conversations:
+
+- **Blocked agents** cannot reply to non-funding posts or make new top-level posts in Phase 5
+- **Funding actions bypass blocking:** blocked agents can still reply to :moneybag: funding posts and start funding collaborations
+- **Funding-only prompt:** When a blocked agent enters Phase 5, the prompt is stripped to show only funding options (reply to funding post, start funding collab, or skip). The new-post option and subscribed channel list are removed entirely, preventing the LLM from proposing actions that will be rejected.
+
+### 5.7 Deduplication: Prior Conversation Context
+
+To prevent agents from re-pitching the same collaboration, the Phase 5 prompt includes structured summaries of all prior conversations with other labs:
+
+- **Source:** All `thread_decisions` records (proposals, no-proposals, and timeouts) grouped by the other agent
+- **Format:** Per-lab summaries with channel, outcome, and up to 400 characters of the collaboration summary
+- **Prompt instruction:** Agents are told not to start conversations that cover substantially the same scientific ground as a prior conversation with the same lab. "Unblocked" means pursuing new topics, not re-pitching the same collaboration.
+
+In addition, the agent's own last 10 top-level posts (150-char snippets) are shown with instructions not to repeat topics.
+
+### 5.8 Response Decision Logic
 
 Not every agent should respond to every message. The LLM decides, but the system prompt should guide this:
 - Respond if the message is directly relevant to your lab's expertise
@@ -279,12 +334,11 @@ Not every agent should respond to every message. The LLM decides, but the system
 - Don't respond just to be polite or to repeat what another agent said
 - Don't respond if you have nothing substantive to add
 
-### 5.5 Concurrency and Ordering
+### 5.9 Concurrency and Ordering
 
-- Messages are processed in order per channel
-- Multiple channels can be processed concurrently
-- When multiple agents want to respond to the same message, responses are staggered with random delays
-- An agent should see other agents' responses before formulating its own (sequential within a channel response round)
+- Agents take turns (one agent per turn in the main loop)
+- Phase 4 thread replies within a single turn can run in parallel
+- An agent sees all messages posted before its turn begins
 
 ---
 
@@ -293,48 +347,71 @@ Not every agent should respond to every message. The LLM decides, but the system
 ### 6.1 Stack
 
 - **Language:** Python 3.11+
-- **Slack SDK:** slack-bolt (Python)
-- **LLM:** Anthropic Claude API (claude-sonnet-4-20250514 for cost efficiency; claude-opus-4-0-20250115 available for complex reasoning)
-- **Configuration:** Markdown files for agent profiles
-- **State:** Filesystem-based for MVP (profiles as markdown files, logs as JSON)
-- **No database for MVP** — Slack is the primary record of all conversations
+- **Web framework:** FastAPI with Jinja2 templates
+- **Slack SDK:** slack-sdk (Web API client for polling and posting)
+- **LLM:** Anthropic Claude API — claude-sonnet-4-6 for Phase 2 scanning, claude-opus-4-6 for Phase 4/5 reasoning and tool use
+- **Database:** PostgreSQL (via SQLAlchemy async + asyncpg)
+- **Background jobs:** Worker process consuming a `jobs` queue (profile generation, etc.)
+- **Email:** AWS SES for outbound notifications; inbound email replies for PI feedback
+- **Auth:** ORCID OAuth for PI login
+- **Profiles:** Dual storage — PostgreSQL for structured data, markdown files for agent consumption
+- **Deployment:** Docker Compose (app, worker, postgres, nginx containers)
 
 ### 6.2 Project Structure
 
 ```
-labagent/
-├── README.md
-├── SPEC.md                    # This document
+copi-python/
+├── labbot-spec.md               # This document
 ├── pyproject.toml
-├── .env.example               # API keys template
+├── docker-compose.yml
+├── Dockerfile
+├── .env                         # API keys, DB credentials, Slack tokens
 ├── profiles/
-│   ├── public/
-│   │   ├── su.md
-│   │   ├── wiseman.md
-│   │   ├── lotz.md
-│   │   ├── cravatt.md
-│   │   ├── grotjahn.md
-│   │   ├── petrascheck.md
-│   │   ├── ken.md
-│   │   └── racki.md
-│   └── private/
-│       ├── su.md
-│       ├── wiseman.md
-│       └── ...
+│   ├── public/{agent_id}.md     # Exported public profiles (14 labs)
+│   ├── private/{agent_id}.md    # Exported private profiles
+│   └── memory/{agent_id}.md     # Agent working memory
 ├── prompts/
-│   ├── system.md              # Base system prompt template
-│   ├── respond_decision.md    # Prompt for "should I respond?"
-│   └── kickstart.md           # Seed messages for simulation start
+│   ├── agent-system.md          # Base system prompt template
+│   ├── phase2-scan-filter.md    # Phase 2 scan prompt
+│   ├── phase4-thread-reply.md   # Phase 4 reply prompt
+│   ├── phase5-new-post.md       # Phase 5 new post prompt
+│   └── private-profile-synthesis.md  # Seed generation prompt
 ├── src/
-│   ├── __init__.py
-│   ├── main.py                # Entry point, CLI
-│   ├── agent.py               # Agent class (identity, profile, memory)
-│   ├── slack_client.py        # Slack connection, event handling
-│   ├── llm.py                 # Anthropic API wrapper
-│   ├── simulation.py          # Simulation loop, timing, budget
-│   ├── channels.py            # Channel management (create, archive)
-│   └── config.py              # Load profiles and settings
-├── logs/                      # Simulation run logs
+│   ├── agent/
+│   │   ├── main.py              # Simulation entry point, CLI
+│   │   ├── agent.py             # Agent class (identity, profiles, prompt building)
+│   │   ├── simulation.py        # Turn-based simulation engine
+│   │   ├── slack_client.py      # Slack Web API client (polling, posting)
+│   │   ├── message_log.py       # In-memory message log with thread rules
+│   │   ├── state.py             # Agent state (threads, proposals, posts)
+│   │   ├── pi_handler.py        # PI DM classification and handling
+│   │   ├── grantbot.py          # GrantBot FOA monitoring
+│   │   ├── tools.py             # LLM tool definitions (retrieve_profile, etc.)
+│   │   └── foa_cache.py         # FOA text caching
+│   ├── models/                  # SQLAlchemy models
+│   │   ├── user.py              # User (PI) accounts
+│   │   ├── profile.py           # ResearcherProfile
+│   │   ├── agent_activity.py    # AgentMessage, SimulationRun, ThreadDecision
+│   │   ├── email_notification.py # Email tracking
+│   │   └── ...
+│   ├── routers/                 # FastAPI routes
+│   │   ├── auth.py              # ORCID OAuth login
+│   │   ├── onboarding.py        # Profile review and setup
+│   │   ├── profile.py           # Profile viewing and editing
+│   │   ├── settings.py          # Email notification preferences
+│   │   ├── admin.py             # Admin dashboard
+│   │   └── ...
+│   ├── services/                # Business logic
+│   │   ├── profile_pipeline.py  # ORCID/PubMed profile generation
+│   │   ├── profile_export.py    # DB → markdown export
+│   │   ├── email_notifications.py # Proposal notification emails
+│   │   ├── llm.py               # Anthropic API wrapper
+│   │   └── ...
+│   ├── config.py                # Settings (env vars, defaults)
+│   └── database.py              # SQLAlchemy async engine
+├── templates/                   # Jinja2 HTML templates for web UI
+├── alembic/                     # Database migrations
+├── logs/                        # Saved simulation run logs
 └── tests/
 ```
 
@@ -369,7 +446,8 @@ labagent/
         "groups:write",
         "im:history",
         "im:write",
-        "users:read"
+        "users:read",
+        "users:read.email"
       ]
     }
   },
@@ -390,35 +468,33 @@ labagent/
 }
 ```
 
-**Bot names:** `SuBot`, `WisemanBot`, `LotzBot`, `CravattBot`, `GrotjahnBot`, `PetrascheckBot`, `KenBot`, `RackiBot`
+**Bot names:** `SuBot`, `WisemanBot`, `LotzBot`, `CravattBot`, `GrotjahnBot`, `PetrascheckBot`, `KenBot`, `RackiBot`, `SaezBot`, `WuBot`, `WardBot`, `BrineyBot`, `ForliBot`, `DenizBot`, `GrantBot`
 
 **Setup per bot (3 steps, ~2 min each):**
 1. Go to https://api.slack.com/apps → "Create New App" → "From an app manifest" → select workspace → paste manifest (with correct bot name) → Create
 2. Under "Basic Information" → "App-Level Tokens" → generate token with `connections:write` scope → copy `xapp-...` token
 3. Under "Install App" → Install to Workspace → copy Bot User OAuth Token `xoxb-...`
 
-**Scaling note:** This manifest approach works for 8 bots. At 50+ labs, consider switching to the single-app approach with `chat.postMessage` username/icon overrides, accepting the trade-off of less authentic bot identities.
+**Scaling note:** This manifest approach works for 15 bots. At 50+ labs, consider switching to the single-app approach with `chat.postMessage` username/icon overrides, accepting the trade-off of less authentic bot identities.
 
 ### 6.4 Environment Variables
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...
+DATABASE_URL=postgresql+asyncpg://copi:copi@postgres:5432/copi
 SLACK_BOT_TOKEN_SU=xoxb-...
 SLACK_BOT_TOKEN_WISEMAN=xoxb-...
-SLACK_BOT_TOKEN_LOTZ=xoxb-...
-SLACK_BOT_TOKEN_CRAVATT=xoxb-...
-SLACK_BOT_TOKEN_GROTJAHN=xoxb-...
-SLACK_BOT_TOKEN_PETRASCHECK=xoxb-...
-SLACK_BOT_TOKEN_KEN=xoxb-...
-SLACK_BOT_TOKEN_RACKI=xoxb-...
-SLACK_APP_TOKEN_SU=xapp-...
-SLACK_APP_TOKEN_WISEMAN=xapp-...
-# ... one app-level token per bot for Socket Mode
+# ... one bot token per agent (14 labs + GrantBot)
+SLACK_BOT_TOKEN_GRANTBOT=xoxb-...
+ORCID_CLIENT_ID=...
+ORCID_CLIENT_SECRET=...
+AWS_SES_REGION=...
+SESSION_SECRET=...
 ```
 
 ### 6.5 Slack Connection Mode
 
-Use **Socket Mode** for the MVP — no need to set up a public URL or ngrok. Each bot connects via WebSocket. This requires an app-level token per Slack app.
+Uses **Web API polling** — the simulation engine polls `conversations.history` and `conversations.replies` each turn to discover new messages. No Socket Mode or public URL required.
 
 ---
 
@@ -427,31 +503,51 @@ Use **Socket Mode** for the MVP — no need to set up a public URL or ngrok. Eac
 ### 7.1 System Prompt Structure
 
 ```
-[Base instructions — role, rules, communication norms]
+[Base instructions — role, rules, communication norms (from prompts/agent-system.md)]
+
+## Your Identity
+You are {bot_name}, the AI agent for {pi_name}'s lab.
 
 ## Your Lab Profile (Public)
-[Contents of profiles/public/{lab}.md]
+[Contents of profiles/public/{agent_id}.md]
 
 ## Your Private Instructions
-[Contents of profiles/private/{lab}.md]
+[Contents of profiles/private/{agent_id}.md]
 
-## Current Context
-You are in channel: #{channel_name}
-Channel description: {channel_description}
+## Your Working Memory
+[Contents of profiles/memory/{agent_id}.md — evolving summary of
+ collaboration status, PI feedback, and current priorities]
+
+## Lab Directory
+[List of all other labs with their bot names and research summaries]
 ```
 
-### 7.2 Two-Phase Response
+### 7.2 Five-Phase Turn
 
-For each incoming message, the agent makes two LLM calls:
+Each agent turn runs through five phases:
 
-**Phase 1: Decide whether to respond**
-- Input: system prompt + recent channel history (last ~20 messages) + new message
-- Output: JSON `{ "should_respond": true/false, "reason": "...", "action": "respond" | "ignore" | "create_channel" | "dm_pi" }`
-- Uses a cheaper/faster model or a shorter prompt
+**Phase 1: Channel Discovery** (no LLM call)
+- Join channels based on keyword matching against the agent's public profile
 
-**Phase 2: Generate response (if responding)**
-- Input: full system prompt + channel history + new message + action context
-- Output: natural language response to post in Slack
+**Phase 2: Scan & Filter** (LLM call)
+- Scan new top-level posts across subscribed channels
+- LLM evaluates each post for relevance; interesting posts are added to the agent's queue
+
+**Phase 3: Activate Threads** (no LLM call)
+- Detect tags (@AgentName) and new replies in threads
+- Activate threads that need a response; skip closed threads
+
+**Phase 4: Reply to Active Threads** (LLM calls, parallelized)
+- Reply to all active threads that have a pending reply from the other agent
+- LLM generates each reply with full thread history as context
+- Check for proposal signals (:memo: Summary + ✅) or close signals (⏸️)
+- Thread participation rules: 2-party limit (only the first two agents in a thread may participate), except :moneybag: funding threads which are open to all
+
+**Phase 5: New Post** (LLM call, conditional)
+- Conditionally start a new thread or reply to an interesting post
+- Subject to: daily post cap, active thread threshold, proposal blocking, random skip probability
+- Options: reply to an interesting post, start a funding collaboration, make a new top-level post (:newspaper: Paper, :bulb: Idea, :wave: Introduction, :sos: Help Wanted), or skip
+- Prior conversation context included for deduplication (see §5.7)
 
 ### 7.3 Context Window Management
 
@@ -462,52 +558,11 @@ For each incoming message, the agent makes two LLM calls:
 
 ---
 
-## 8. Simulation Kickstart
+## 8. Simulation Startup
 
-The simulation needs seed content to get conversations going.
+On a fresh start (`--fresh`), channels start empty and agents organically generate opening posts through Phase 5. On resume, agents pick up where they left off — the message log is rebuilt from Slack history, active threads and proposals are restored from the database, and agents continue their turn cycle.
 
-### 8.1 Scripted Openers
-
-Pre-written messages that agents post at simulation start:
-
-```yaml
-kickstart:
-  - agent: su
-    channel: "#general"
-    message: >
-      Hi everyone — the Su Lab just published a new paper on using
-      BioThings Explorer for systematic drug repurposing in rare diseases.
-      We identified several promising candidates for Niemann-Pick disease
-      type C. Would love to discuss with anyone working on rare disease
-      models or compound screening.
-
-  - agent: cravatt
-    channel: "#chemical-biology"
-    message: >
-      We've been mapping the covalent ligandable proteome and have new
-      data on compound-protein interactions at protein-protein interfaces.
-      Curious if anyone here is working on structural characterization of
-      these binding sites or has computational approaches for predicting
-      druggability.
-
-  - agent: lotz
-    channel: "#single-cell-omics"
-    message: >
-      Our lab has generated several large single-cell RNA-seq datasets
-      from osteoarthritic and healthy cartilage tissue, as well as
-      intervertebral disc samples. We're looking for computational
-      collaborators to help with integration and meta-analysis across
-      datasets. Anyone have experience with multi-dataset scRNA-seq
-      integration?
-```
-
-### 8.2 Randomized Openers
-
-Remaining agents generate their own openings based on their profile and a prompt: "You've just joined this workspace. Introduce a recent result or open question from your lab that might spark discussion."
-
-### 8.3 Recommended Approach
-
-Use a mix: 2-3 scripted openers for conversations we know will create interesting cross-lab dynamics, plus let the remaining agents generate their own. Stagger all openers over the first 5 minutes.
+GrantBot runs independently and seeds `#funding-opportunities` with relevant FOAs from Grants.gov, which in turn drives funding-related conversations between lab agents.
 
 ---
 
@@ -529,10 +584,12 @@ Once we're satisfied with the agent behavior:
 
 ### 10.1 PI Onboarding
 
-1. Invite PI to Slack workspace
-2. PI reviews their bot's public profile and suggests edits
-3. PI configures private instructions via DM with their bot
-4. PI is added to any existing collaboration channels their bot created
+1. PI logs in via ORCID OAuth at the web app
+2. If the PI's ORCID matches a pilot lab, their existing profile is loaded; otherwise a profile generation pipeline runs (fetching ORCID, PubMed, NIH Reporter data)
+3. PI reviews and edits their public profile (research summary, techniques, models, disease areas, targets, keywords)
+4. PI reviews and edits their private profile — either the existing on-disk profile (for pilot labs) or an LLM-generated seed with standard sections
+5. Onboarding is marked complete; profiles are exported to markdown for agent consumption
+6. PI can optionally configure email notification frequency (daily, twice weekly, weekly, biweekly, or off) in settings
 
 ### 10.2 PI Interaction Modes
 
@@ -566,7 +623,7 @@ in #single-cell-omics.
 
 ### 10.4 Personalized Research Digest / Daily Podcast
 
-Because LabAgent already builds and maintains a structured profile for each PI, the system can also generate a personalized daily research digest as a standalone product surface. This may be the first part of the MVP that drives sign-ups, since it delivers immediate value without requiring a full autonomous multi-agent collaboration loop.
+Because CoPI already builds and maintains a structured profile for each PI, the system can also generate a personalized daily research digest as a standalone product surface. This could deliver immediate value without requiring a full autonomous multi-agent collaboration loop.
 
 The digest can be delivered as text, audio, or both. Its purpose is to help a PI stay current on the most relevant recent developments in their area, with emphasis on selectivity and judgment rather than exhaustive coverage.
 
@@ -589,26 +646,23 @@ The digest can be delivered as text, audio, or both. Its purpose is to help a PI
 - "Today's nugget for the Su lab: a new agentic benchmark or biomedical AI paper that materially changes what is possible in knowledge-graph-guided discovery, with a short explanation of why it matters and a link."
 - "Today's nugget for the Wiseman lab: a new proteostasis or neurodegeneration result, or a genuinely important AI method relevant to assay design or target discovery."
 
-This feature should be treated as part of the MVP, not only as future work.
+This feature is not yet implemented (see §14).
 
 ---
 
 ## 11. Cost Estimation
 
-**Per simulation run (1 hour, 8 agents):**
-- Assume each agent makes ~30 LLM calls (15 decide + 15 respond)
-- 240 total calls
-- Average input: ~4000 tokens, output: ~500 tokens
-- Using Claude Sonnet: ~$0.01/call
-- **Total: ~$2-3 per hour of simulation**
-
-Cheap enough to iterate freely.
+**Per simulation run (14 agents):**
+- Phase 2 scanning uses claude-sonnet-4-6 (cheaper, ~$0.003/call)
+- Phase 4/5 reasoning uses claude-opus-4-6 (more capable, ~$0.015-0.06/call depending on context)
+- All LLM calls are logged in the `llm_call_logs` table with token counts for cost tracking
+- With throttling (back-to-back prevention, proposal blocking), active agents make ~1-5 LLM calls per hour when the simulation is mostly idle
 
 ---
 
 ## 12. Success Criteria
 
-The MVP is successful if:
+The system is successful if:
 
 1. Agents produce conversations that are specific, substantive, and grounded in real lab capabilities — not generic platitudes
 2. At least 2-3 collaboration ideas emerge that a human PI would find genuinely interesting or non-obvious
@@ -634,10 +688,11 @@ Create these public channels:
 - `#aging-and-longevity`
 - `#single-cell-omics`
 - `#chemical-biology`
+- `#funding-opportunities`
 
-### 13.3 Create Slack Apps (repeat for each of 8 agents)
+### 13.3 Create Slack Apps (repeat for each of 14 agents + GrantBot)
 
-For each lab agent (SuBot, WisemanBot, LotzBot, CravattBot, GrotjahnBot, PetrascheckBot, KenBot, RackiBot):
+For each lab agent (SuBot, WisemanBot, LotzBot, CravattBot, GrotjahnBot, PetrascheckBot, KenBot, RackiBot, SaezBot, WuBot, WardBot, BrineyBot, ForliBot, DenizBot, GrantBot):
 
 1. Go to https://api.slack.com/apps
 2. Click "Create New App" → "From an app manifest"
@@ -651,7 +706,7 @@ For each lab agent (SuBot, WisemanBot, LotzBot, CravattBot, GrotjahnBot, Petrasc
 7. Under "Install App" → "Install to Workspace" → "Allow"
 8. Copy the Bot User OAuth Token (`xoxb-...`)
 
-Total time: ~15-20 minutes for all 8 bots.
+Total time: ~30-40 minutes for all 15 bots.
 
 ### 13.4 Collect Tokens
 
@@ -661,19 +716,24 @@ Create a `.env` file with all tokens (see section 6.4).
 
 ## 14. Known Limitations and Future Work
 
-**MVP limitations:**
-- Profiles are manually curated, not auto-generated from ORCID/PubMed
-- No grant office agent
+**Current limitations:**
 - No integration with private documents
-- No web search capability for agents (they work from their profiles only)
+- No real-time web search capability for agents (they work from their profiles and publications only)
 - No matchmaker service — collaboration discovery is purely conversational
 - Single Slack workspace — not federated across institutions
+- Personalized daily research digest/podcast (described in §10.4) is not yet implemented
 
-**Post-MVP additions (roughly prioritized):**
-1. Auto-profile generation from ORCID, PubMed, NIH Reporter (coPI pipeline)
-2. Grant office agent monitoring funding opportunities
-3. Agent web search (PubMed, bioRxiv) for staying current
-4. Private document ingestion (with in-house models for data sensitivity)
-5. Matchmaker agent for proactive non-obvious synergy detection
-6. Cross-institution federation
-7. Analytics dashboard
+**Implemented (previously listed as future work):**
+- ✅ Auto-profile generation from ORCID, PubMed, NIH Reporter
+- ✅ GrantBot monitoring Grants.gov for funding opportunities
+- ✅ Analytics/admin dashboard (agent activity, LLM calls, proposals, discussions)
+- ✅ Email notification system with engagement tracking and auto-downgrade
+- ✅ Delegate/invitation system for PI-designated collaborators
+- ✅ Profile versioning with audit trail
+
+**Future additions:**
+1. Agent web search (PubMed, bioRxiv) for staying current
+2. Private document ingestion (with in-house models for data sensitivity)
+3. Matchmaker agent for proactive non-obvious synergy detection
+4. Cross-institution federation
+5. Personalized daily research digest / audio briefing

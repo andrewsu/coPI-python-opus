@@ -24,15 +24,19 @@ class PIHandler:
         self,
         agents: dict[str, Agent],
         slack_clients: dict,  # agent_id -> AgentSlackClient
-        pi_slack_id_to_agent_id: dict[str, str],
+        pi_slack_id_to_agent_ids: dict[str, list[str]],
         message_log: MessageLog,
         session_factory=None,
     ):
         self.agents = agents
         self.slack_clients = slack_clients
-        self.pi_slack_id_to_agent_id = pi_slack_id_to_agent_id
+        self.pi_slack_id_to_agent_ids = pi_slack_id_to_agent_ids
         # Reverse mapping: agent_id -> PI slack_user_id
-        self.agent_id_to_pi_slack_id = {v: k for k, v in pi_slack_id_to_agent_id.items()}
+        self.agent_id_to_pi_slack_id = {
+            agent_id: slack_id
+            for slack_id, agent_ids in pi_slack_id_to_agent_ids.items()
+            for agent_id in agent_ids
+        }
         self.message_log = message_log
         self.session_factory = session_factory
 
@@ -110,13 +114,48 @@ class PIHandler:
             if profile_match:
                 new_profile = profile_match.group(1).strip()
                 agent.update_private_profile(new_profile)
+
+                # Persist to DB and record revision
+                if self.session_factory:
+                    try:
+                        async with self.session_factory() as db:
+                            await agent.persist_private_profile_to_db(db)
+
+                            # Record profile revision
+                            from sqlalchemy import select
+                            from src.models import AgentRegistry, User
+                            from src.services.profile_versioning import create_revision
+                            agent_reg = (await db.execute(
+                                select(AgentRegistry).where(AgentRegistry.agent_id == agent_id)
+                            )).scalar_one_or_none()
+                            pi_user = (await db.execute(
+                                select(User).join(AgentRegistry, AgentRegistry.user_id == User.id)
+                                .where(AgentRegistry.slack_user_id == pi_slack_id)
+                            )).scalar_one_or_none()
+                            if agent_reg:
+                                summary = instruction[:200] if instruction else None
+                                await create_revision(
+                                    db,
+                                    agent_registry_id=agent_reg.id,
+                                    profile_type="private",
+                                    content=new_profile,
+                                    changed_by_user_id=pi_user.id if pi_user else None,
+                                    mechanism="slack_dm",
+                                    change_summary=f"PI instruction: {summary}" if summary else None,
+                                )
+                                await db.commit()
+                    except Exception as db_exc:
+                        logger.error("[%s] DB persist failed: %s", agent_id, db_exc)
+
                 changes = changes_match.group(1).strip() if changes_match else "Profile updated."
 
                 confirmation = (
                     f"I've updated my private profile to reflect your instruction. "
                     f"Here's what changed: {changes}\n\n"
-                    f"Let me know if anything looks off, or you can edit the profile "
-                    f"directly at copi.science."
+                    f"Here's my full updated profile:\n\n"
+                    f"```\n{new_profile}\n```\n\n"
+                    f"Reply with further instructions to refine, or edit directly "
+                    f"at copi.science/agent/profile/edit."
                 )
                 await self._send_dm(agent_id, pi_slack_id, confirmation)
                 logger.info("[%s] Private profile rewritten per PI instruction", agent_id)

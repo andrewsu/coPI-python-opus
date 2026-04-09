@@ -34,7 +34,7 @@ Account creation happens automatically on first ORCID login:
 1. **ORCID OAuth** → account created with name, email, ORCID ID from OAuth response
 2. **Profile pipeline runs** → pull ORCID data (affiliation, grants, works), fetch PubMed abstracts, run LLM synthesis. Show progress indicator: "Pulling your publications... Analyzing your research... Building your profile..."
 3. **Review generated profile** → user sees their synthesized research summary, techniques, models, disease areas, key targets. User can edit any field directly.
-4. **Optional: add user-submitted texts** — user can add up to 5 text blocks (research interests, grant aims, equipment, etc.)
+4. **Review and edit seeded private profile / agent instructions** — LLM generates a draft private profile (agent instructions) from the user's research data; user reviews and edits before saving
 5. **Onboarding complete** → `onboarding_complete` set to true, redirect to profile page
 
 If the user closes during steps 2-4, they resume from where they left off on next login.
@@ -62,16 +62,6 @@ Users can view and directly edit all synthesized profile fields:
 
 Edits save immediately (AJAX or form post) and bump `profile_version`.
 
-### User-Submitted Texts
-
-Users can add up to 5 text submissions, each max 2000 words. Each has:
-- A label (user-provided, e.g., "R01 specific aims", "current research interests", "equipment and resources")
-- Content (free text)
-
-Users can add, replace, and delete submissions. Adding or modifying submissions triggers profile re-synthesis — the user is notified and can accept/edit/dismiss the new profile, same as the publication refresh flow.
-
-**Privacy:** User-submitted texts are NEVER shown to other users or agents. They inform profile synthesis only and are not exposed in any public-facing view.
-
 ### Profile Refresh
 
 **Manual:** User can click "Refresh profile" to re-run the full pipeline (fetch ORCID data, fetch publications, re-synthesize). Enqueues a `generate_profile` job.
@@ -89,11 +79,22 @@ Users can add, replace, and delete submissions. Adding or modifying submissions 
 ## Settings
 
 Accessible at `/settings`:
-- Display name and institution (editable)
-- Email notifications on/off
-- Manage user-submitted texts
-- Request profile refresh
-- Delete account
+- Email notification frequency (daily, twice a week, weekly, every two weeks, off)
+- Status indicator: "Active" or "Paused by system — review pending proposals to reactivate"
+- Account deletion link
+
+Additional settings are accessible from other pages:
+- Display name and institution (editable from `/profile/edit`)
+- Private profile / agent instructions (editable from `/agent/{agent_id}/profile/edit`)
+- Delegate management (from `/agent/{agent_id}/dashboard`)
+
+### Delegate Management
+
+PIs can grant delegate access to additional Slack accounts from the settings page. Delegates have full PI powers — DMs, thread posts, proposal review, standing instructions — except they cannot add or remove other delegates.
+
+- **Add delegate:** PI enters the delegate's email address. The system looks up the corresponding Slack user ID via the Slack API (`users.lookupByEmail`). The Slack user ID is appended to the agent's `delegate_slack_ids` array.
+- **Remove delegate:** PI removes a delegate from the list. The Slack user ID is removed from `delegate_slack_ids`.
+- **Restrictions:** Only the primary PI (the account linked via `AgentRegistry.slack_user_id`) can manage delegates. Delegates cannot add or remove other delegates.
 
 ## Account Deletion
 

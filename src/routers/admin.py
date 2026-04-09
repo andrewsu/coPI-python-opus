@@ -167,6 +167,28 @@ async def admin_user_detail(
     )
 
 
+@router.post("/users/{user_id}/delete")
+async def admin_delete_user(
+    user_id: uuid.UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """Delete a user account (admin only)."""
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+
+    name = user.name
+    await db.delete(user)
+    await db.commit()
+    logger.info("Admin %s deleted user %s (%s)", current_user.name, name, user_id)
+    return RedirectResponse(url="/admin/users", status_code=302)
+
+
 @router.get("/jobs", response_class=HTMLResponse)
 async def admin_jobs(
     request: Request,

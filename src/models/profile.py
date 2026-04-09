@@ -26,8 +26,12 @@ class ResearcherProfile(Base):
     key_targets: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
     keywords: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
     grant_titles: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
-    # [{label: str, content: str, submitted_at: str}]
+    # [{label: str, content: str, submitted_at: str}]  — deprecated, use private_profile_md
     user_submitted_texts: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Live private profile markdown, editable by user via web UI or agent via PI DM
+    private_profile_md: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # LLM-generated draft staged for user review during onboarding
+    private_profile_seed: Mapped[str | None] = mapped_column(Text, nullable=True)
     profile_version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     profile_generated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

@@ -33,6 +33,30 @@
         </span>
     </div>
 
+    {% if not is_owner %}
+    <!-- Delegate banner -->
+    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 mb-6 text-sm text-indigo-700">
+        You are viewing {{ agent.bot_name }} as a delegate of {{ agent.pi_name }}.
+    </div>
+    {% endif %}
+
+    {% if not is_owner and not delegate_has_slack %}
+    <!-- Slack connect notice for delegates -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-800">
+        <p class="mb-2">
+            To interact with {{ agent.bot_name }} in Slack (DMs, thread replies, standing instructions),
+            join the <a href="{{ slack_invite_url }}" target="_blank" class="underline">Slack workspace</a>
+            and connect your account.
+        </p>
+        <form method="POST" action="/agent/{{ agent.agent_id }}/delegates/connect-slack" class="inline">
+            <button type="submit"
+                    class="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700">
+                Connect Slack Account
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
     <!-- Stats cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
@@ -78,32 +102,66 @@
             </div>
             <div class="px-6 py-4">
                 <div class="text-sm text-gray-700 proposal-md" data-markdown="{{ p.summary_text | e }}"></div>
-                <form method="POST" action="/agent/proposals/{{ p.id }}/review" class="pt-4 border-t border-gray-100 mt-4">
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
-                        {% set ratings = [
-                            (1, "Not a good idea", "Not interesting OR multiple major weaknesses"),
-                            (2, "Good idea", "Medium interest OR one major weakness"),
-                            (3, "Great idea", "High interest, minor weaknesses only"),
-                            (4, "Excellent idea", "High interest, no notable weaknesses"),
-                        ] %}
-                        {% for val, label, desc in ratings %}
-                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg border
-                            {% if val == 3 %}border-indigo-200 bg-indigo-50{% else %}border-gray-200 hover:bg-gray-50{% endif %}">
-                            <input type="radio" name="rating" value="{{ val }}" class="mt-0.5 text-indigo-600" {% if val == 3 %}checked{% endif %}>
-                            <div>
-                                <div class="text-sm font-medium text-gray-800">{{ val }} — {{ label }}</div>
-                                <div class="text-xs text-gray-500">{{ desc }}</div>
-                            </div>
-                        </label>
-                        {% endfor %}
+                <div class="pt-4 border-t border-gray-100 mt-4">
+                    <!-- Tab buttons -->
+                    <div class="flex gap-2 mb-4">
+                        <button type="button" onclick="showTab(this, 'review-{{ loop.index }}')"
+                                class="tab-btn px-3 py-1.5 text-sm font-medium rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            Rate &amp; Close
+                        </button>
+                        <button type="button" onclick="showTab(this, 'reopen-{{ loop.index }}')"
+                                class="tab-btn px-3 py-1.5 text-sm font-medium rounded-lg text-gray-500 border border-gray-200 hover:bg-gray-50">
+                            Give Guidance &amp; Reopen
+                        </button>
                     </div>
-                    <textarea name="comment" rows="3" placeholder="Optional comment — what did the agent get right or wrong?"
-                              class="w-full text-sm px-3 py-2 mb-3"></textarea>
-                    <button type="submit"
-                            class="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
-                        Submit Review
-                    </button>
-                </form>
+
+                    <!-- Rate & Close tab -->
+                    <div id="review-{{ loop.index }}" class="tab-panel">
+                        <form method="POST" action="/agent/{{ agent.agent_id }}/proposals/{{ p.id }}/review">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+                                {% set ratings = [
+                                    (1, "Not a good idea", "Not interesting OR multiple major weaknesses"),
+                                    (2, "Good idea", "Medium interest OR one major weakness"),
+                                    (3, "Great idea", "High interest, minor weaknesses only"),
+                                    (4, "Excellent idea", "High interest, no notable weaknesses"),
+                                ] %}
+                                {% for val, label, desc in ratings %}
+                                <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg border
+                                    {% if val == 3 %}border-indigo-200 bg-indigo-50{% else %}border-gray-200 hover:bg-gray-50{% endif %}">
+                                    <input type="radio" name="rating" value="{{ val }}" class="mt-0.5 text-indigo-600" {% if val == 3 %}checked{% endif %}>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-800">{{ val }} — {{ label }}</div>
+                                        <div class="text-xs text-gray-500">{{ desc }}</div>
+                                    </div>
+                                </label>
+                                {% endfor %}
+                            </div>
+                            <textarea name="comment" rows="3" placeholder="Optional comment — what did the agent get right or wrong?"
+                                      class="w-full text-sm px-3 py-2 mb-3"></textarea>
+                            <button type="submit"
+                                    class="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
+                                Submit Review
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Give Guidance & Reopen tab -->
+                    <div id="reopen-{{ loop.index }}" class="tab-panel hidden">
+                        <p class="text-sm text-gray-500 mb-3">
+                            Send guidance to both agents. Your feedback will be posted in the Slack thread
+                            and the agents will continue the conversation with a fresh set of replies.
+                        </p>
+                        <form method="POST" action="/agent/{{ agent.agent_id }}/proposals/{{ p.id }}/reopen">
+                            <textarea name="guidance" rows="4" required
+                                      placeholder="e.g., Work out the experimental design in more detail. Focus on the aging angle rather than general drug repurposing."
+                                      class="w-full text-sm px-3 py-2 mb-3 border border-gray-300 rounded-lg"></textarea>
+                            <button type="submit"
+                                    class="px-5 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700">
+                                Post Guidance &amp; Reopen Thread
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
         {% endfor %}
@@ -151,8 +209,15 @@
 
     <!-- Quick links -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Public profile -->
+        <a href="/agent/{{ agent.agent_id }}/public-profile"
+           class="bg-white rounded-xl border border-gray-200 p-5 hover:border-indigo-300 transition">
+            <div class="text-lg font-semibold text-gray-800 mb-1">Public Profile</div>
+            <p class="text-sm text-gray-500">View and edit the lab's research summary, techniques, and keywords.</p>
+        </a>
+
         <!-- Private profile -->
-        <a href="/agent/profile"
+        <a href="/agent/{{ agent.agent_id }}/profile"
            class="bg-white rounded-xl border border-gray-200 p-5 hover:border-indigo-300 transition">
             <div class="text-lg font-semibold text-gray-800 mb-1">Agent Instructions</div>
             <p class="text-sm text-gray-500">View and edit your agent's private behavioral profile.</p>
@@ -176,7 +241,7 @@
             <p class="text-sm text-gray-500 mb-2">
                 Enter the email you used to join Slack. We'll look up your account automatically.
             </p>
-            <form method="POST" action="/agent/slack" class="flex gap-2">
+            <form method="POST" action="/agent/{{ agent.agent_id }}/slack" class="flex gap-2">
                 <input type="email" name="email" placeholder="you@example.com"
                        class="flex-1 text-sm border border-gray-300 rounded-md px-3 py-1.5">
                 <button type="submit"
@@ -185,6 +250,87 @@
                 </button>
             </form>
         </div>
+
+        {% if is_owner %}
+        <!-- Delegate access (PI only) -->
+        <div class="bg-white rounded-xl border border-gray-200 p-5 md:col-span-3">
+            <div class="text-lg font-semibold text-gray-800 mb-1">Delegate Access</div>
+            <p class="text-sm text-gray-500 mb-3">
+                Grant others permission to view and manage your agent, review proposals,
+                and provide guidance via the web app and Slack.
+            </p>
+
+            {% if web_delegates %}
+            <div class="mb-4">
+                <div class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Active Delegates</div>
+                <div class="space-y-2">
+                    {% for wd in web_delegates %}
+                    <div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                        <div class="text-sm">
+                            <span class="font-medium text-gray-700">{{ wd.user.name }}</span>
+                            <span class="text-gray-400 ml-1">({{ wd.user.email }})</span>
+                            <span class="text-xs text-gray-400 ml-2">added {{ wd.created_at.strftime('%b %d') }}</span>
+                        </div>
+                        <form method="POST" action="/agent/{{ agent.agent_id }}/delegates/{{ wd.id }}/remove" class="inline">
+                            <button type="submit" class="text-xs text-red-500 hover:text-red-700">Remove</button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if pending_invitations %}
+            <div class="mb-4">
+                <div class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Pending Invitations</div>
+                <div class="space-y-2">
+                    {% for inv in pending_invitations %}
+                    <div class="flex items-center justify-between bg-amber-50 rounded-lg px-3 py-2">
+                        <div class="text-sm">
+                            <span class="text-gray-700">{{ inv.email }}</span>
+                            <span class="text-xs text-gray-400 ml-2">sent {{ inv.created_at.strftime('%b %d') }}</span>
+                            <span class="text-xs text-gray-400 ml-1">· expires {{ inv.expires_at.strftime('%b %d') }}</span>
+                        </div>
+                        <form method="POST" action="/agent/{{ agent.agent_id }}/delegates/{{ inv.id }}/revoke" class="inline">
+                            <button type="submit" class="text-xs text-amber-600 hover:text-amber-800">Revoke</button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if delegates %}
+            <div class="mb-4">
+                <div class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Slack-Only Delegates</div>
+                <p class="text-xs text-gray-400 mb-2">These delegates were added via Slack. Re-invite through the web for full access.</p>
+                <div class="space-y-2">
+                    {% for d in delegates %}
+                    <div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                        <div class="text-sm">
+                            <span class="font-medium text-gray-700">{{ d.name }}</span>
+                            <span class="text-gray-400 ml-1">({{ d.slack_id }})</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if delegate_error %}
+            <p class="text-sm text-red-600 mb-2">{{ delegate_error }}</p>
+            {% endif %}
+
+            <form method="POST" action="/agent/{{ agent.agent_id }}/delegates/invite">
+                <textarea name="emails" rows="2" placeholder="Enter email addresses (comma or newline separated)"
+                          class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 mb-2"></textarea>
+                <button type="submit"
+                        class="px-4 py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">
+                    Send Invitations
+                </button>
+            </form>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
@@ -199,5 +345,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+function showTab(btn, panelId) {
+    // Find sibling tab buttons and panels within the same proposal card
+    var container = btn.closest('.border-t');
+    var buttons = container.querySelectorAll('.tab-btn');
+    var panels = container.querySelectorAll('.tab-panel');
+
+    buttons.forEach(function(b) {
+        b.classList.remove('bg-indigo-50', 'text-indigo-700', 'border-indigo-200');
+        b.classList.add('text-gray-500', 'border-gray-200');
+    });
+    btn.classList.add('bg-indigo-50', 'text-indigo-700', 'border-indigo-200');
+    btn.classList.remove('text-gray-500', 'border-gray-200');
+
+    panels.forEach(function(p) { p.classList.add('hidden'); });
+    document.getElementById(panelId).classList.remove('hidden');
+}
 </script>
 {% endblock %}

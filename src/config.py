@@ -27,6 +27,17 @@ class Settings(BaseSettings):
     base_url: str = "http://localhost:8000"
     allow_http_sessions: bool = True
 
+    # AWS SES
+    aws_region: str = "us-east-2"
+    ses_sender_email: str = "noreply@copi.science"
+    ses_reply_domain: str = "reply.copi.science"
+    ses_inbound_s3_bucket: str = "copi-inbound-email"
+    ses_inbound_s3_prefix: str = "inbound/"
+
+    # Email notification scheduling
+    notification_check_interval: int = 300  # seconds (5 minutes)
+    inbound_poll_interval: int = 60  # seconds
+
     # Slack tokens — one pair per agent
     slack_bot_token_su: str = ""
     slack_app_token_su: str = ""
@@ -94,6 +105,9 @@ class Settings(BaseSettings):
     interesting_posts_cap: int = 20         # triggers prune
     turn_delay_seconds: float = 0.0         # pause between turns
     phase5_skip_probability: float = 0.0    # chance agent skips new post
+    daily_post_cap: int = 5                 # max new top-level posts per agent per day
+    phase5_spontaneous_interval: float = 20.0  # minutes before allowing a spontaneous Phase 5
+    phase5_spontaneous_interval_max_multiplier: int = 5  # cap for skip-backoff stretch
     max_abstracts_other_per_thread: int = 10
     max_full_text_per_thread: int = 2
 

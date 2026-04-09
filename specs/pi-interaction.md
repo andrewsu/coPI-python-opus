@@ -4,7 +4,9 @@
 
 PIs interact with their lab bot through Slack. Interaction happens through three channels: DMs to the bot, tagging the bot in channel posts, and posting directly in agent threads. The bot must recognize PI messages as authoritative and respond appropriately.
 
-PI messages are identified by the Slack user ID stored in the agent's `AgentRegistry.slack_user_id` field. Only the linked PI's messages trigger these behaviors — other human users are treated as observers.
+PI messages are identified by the Slack user ID stored in the agent's `AgentRegistry.slack_user_id` field, or by any Slack user ID in the agent's `delegate_slack_ids` array. Only the linked PI's and delegates' messages trigger these behaviors — other human users are treated as observers.
+
+> **Note on "PI" throughout this document:** "PI" includes delegates — additional Slack accounts granted PI-level access by the primary PI. Delegates can send standing instructions, feedback, questions, post in threads, and review proposals. The only action reserved for the primary PI is managing delegates (adding/removing them).
 
 ## Thread Participation Rules (Clarified)
 
@@ -38,9 +40,9 @@ Examples:
 **Profile update process (optimistic rewrite with async review):**
 1. The bot uses the LLM to rewrite the full private profile, merging the new instruction with existing content — resolving conflicts, removing redundancy, and maintaining a coherent document
 2. The updated profile is applied immediately — the bot operates on it starting next turn
-3. The bot DMs the PI a summary of what changed: "I've updated my private profile to reflect your instruction. Here's what changed: [diff summary]. Let me know if anything looks off, or you can edit the profile directly at copi.science."
+3. The bot DMs the PI the **full updated private profile** (not just a change summary), followed by: "Let me know if you'd like any changes, or you can edit directly at copi.science/agent/profile/edit."
 4. If the PI objects or corrects, the bot rewrites again incorporating the correction
-5. The full updated profile is also viewable/editable in the web UI at any time
+5. The full updated profile is also viewable/editable in the web UI at copi.science/agent/profile/edit at any time
 
 ### Feedback on Past Actions
 
@@ -195,9 +197,11 @@ When a PI gives a standing instruction or feedback that implies a persistent cha
 
 1. The LLM receives the current private profile and the PI's new instruction
 2. It produces a rewritten profile that integrates the new guidance — merging, deduplicating, and resolving conflicts with existing content
-3. The rewritten profile replaces the existing file and takes effect immediately
-4. The bot DMs the PI a summary of the changes for async review
+3. The rewritten profile replaces the existing file and is persisted to the database (`private_profile_md` column), taking effect immediately
+4. The bot DMs the PI the **full updated private profile** and invites further revision via DM or direct editing at copi.science/agent/profile/edit
 5. The bot reads the private profile on every turn as part of its system prompt
+
+The PI can also edit the private profile directly via the web UI at copi.science/agent/profile/edit. Changes made in the web UI are persisted to both the database and the filesystem and take effect on the agent's next turn.
 
 This keeps the private profile as a single coherent document rather than an append-only list of directives.
 

@@ -136,12 +136,23 @@ async def execute_tool(
 
 
 async def _execute_retrieve_foa(foa_number: str) -> str:
-    """Fetch full details of a funding opportunity from Grants.gov."""
+    """Fetch full details of a funding opportunity — checks local cache first."""
+    from src.agent.foa_cache import format_foa_for_prompt
+
+    cached = format_foa_for_prompt(foa_number)
+    if cached:
+        return cached
+
+    # Fall back to Grants.gov API
     from src.services.grants import fetch_opportunity_by_number
 
     result = await fetch_opportunity_by_number(foa_number)
     if not result:
         return f"No funding opportunity found for '{foa_number}'."
+
+    # Cache for future use
+    from src.agent.foa_cache import cache_foa
+    cache_foa(foa_number, result)
 
     parts = [
         f"Title: {result.get('title', 'Unknown')}",

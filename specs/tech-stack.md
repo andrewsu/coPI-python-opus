@@ -32,7 +32,8 @@ CoPI is a Python web application deployed via Docker Compose. PostgreSQL for str
 - **ORM:** SQLAlchemy 2.0 async with asyncpg driver
 - Stores: users, researcher profiles, publications, job queue, agent activity logs, agent registry, thread decisions, proposal reviews, LLM call logs
 - Array fields stored as Postgres ARRAY columns
-- JSONB for `user_submitted_texts`, `pending_profile`, and job `payload`
+- JSONB for `pending_profile` and job `payload`
+- `private_profile_md` and `private_profile_seed` are text columns (not JSONB)
 
 ## Filesystem
 
@@ -87,7 +88,7 @@ Worker process polls the jobs table on a configurable interval. Scale to AWS SQS
 - **Architecture:** Polling-based. The simulation engine polls channels for new messages using `conversations.history`. No webhooks, no event subscriptions.
 - **One Slack app per agent** (12 apps for 12 pilot labs, plus 1 for GrantBot)
 - Each app has its own bot token (`xoxb-...`). App-level tokens (`xapp-...`) are stored but not used (Socket Mode is disabled).
-- **Required OAuth scopes:** `channels:history`, `channels:join`, `channels:manage`, `channels:read`, `chat:write`, `groups:history`, `groups:read`, `groups:write`, `im:history`, `im:read`, `im:write`, `users:read`
+- **Required OAuth scopes:** `channels:history`, `channels:join`, `channels:manage`, `channels:read`, `chat:write`, `groups:history`, `groups:read`, `groups:write`, `im:history`, `im:read`, `im:write`, `users:read`, `users:read.email`
 - **DM support:** Agents can send/receive DMs with their linked PI via `conversations.open` + `chat.postMessage`
 
 ## Hosting and Deployment
@@ -211,12 +212,14 @@ copi-python/
 │   │   ├── job.py
 │   │   ├── agent_activity.py   # SimulationRun, AgentMessage, AgentChannel
 │   │   ├── agent_registry.py   # AgentRegistry, ProposalReview
+│   │   ├── email_notification.py # EmailNotification, EmailEngagementTracker
 ���   │   └── llm_call_log.py     # LlmCallLog
 │   ├── routers/                # FastAPI routers
 │   │   ├── auth.py             # ORCID OAuth flow
 │   │   ├── profile.py          # Profile view/edit
 │   │   ├── onboarding.py       # Signup flow
 │   │   ├── admin.py            # Admin dashboard
+│   │   ├── settings.py         # User settings, notification prefs, unsubscribe
 │   │   └── agent_page.py       # My Agent page, proposal review
 │   ├── services/
 │   │   ��── orcid.py            # ORCID API client
@@ -224,6 +227,9 @@ copi-python/
 │   │   ├── llm.py              # Anthropic API wrapper
 │   │   ├── grants.py           # Grants.gov API client
 │   │   ├── profile_pipeline.py # Orchestrates ingestion steps
+│   │   ├── email.py            # SES outbound (delegate invitations)
+│   │   ├── email_notifications.py # Proposal notification scheduling/sending
+│   │   ├── email_inbound.py    # Inbound email processing (S3, LLM classification)
 │   │   └── profile_export.py   # Export profile to markdown
 ���   ├── worker/
 │   │   └── main.py             # Job queue worker process

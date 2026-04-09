@@ -1,15 +1,15 @@
 """Profile ingestion pipeline orchestrator.
 
-Implements the 9-step pipeline from profile-ingestion.md:
+Implements the pipeline from profile-ingestion.md:
 1. Fetch ORCID profile
 2. Fetch ORCID grants
 3. Fetch ORCID works (PMIDs/DOIs)
 4. Fetch PubMed abstracts
 5. Deep mining: PMC methods sections
-6. Collect user-submitted texts
-7. LLM synthesis
+6. Prepare profile record
+7. LLM synthesis (public profile)
 8. Validation
-9. Store
+9. Store + seed private profile (first creation only)
 """
 
 import hashlib
@@ -23,7 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import Job, Publication, ResearcherProfile, User
-from src.services.llm import synthesize_profile
+from src.services.llm import synthesize_private_profile, synthesize_profile
 from src.services.orcid import fetch_orcid_grants, fetch_orcid_profile, fetch_orcid_works
 from src.services.pubmed import (
     convert_dois_to_pmids,
@@ -263,9 +263,8 @@ async def run_profile_pipeline(
         except Exception as exc:
             logger.debug("Methods fetch failed for %s: %s", pmcid, exc)
 
-    # Step 6: Collect user-submitted texts
-    update_progress("step6", "Collecting user-submitted texts...")
-    # Load or create the ResearcherProfile record
+    # Step 6: Load or create profile record
+    update_progress("step6", "Preparing profile record...")
     profile_result = await db.execute(
         select(ResearcherProfile).where(ResearcherProfile.user_id == user_id)
     )
@@ -275,8 +274,6 @@ async def run_profile_pipeline(
         db.add(profile)
         await db.flush()
 
-    user_submitted_texts = profile.user_submitted_texts or []
-
     # Step 7: LLM Synthesis
     update_progress("step7", "Synthesizing profile with AI...")
     context_text = _build_synthesis_context(
@@ -284,7 +281,6 @@ async def run_profile_pipeline(
         grant_titles=grant_titles,
         publications=pubs_for_synthesis,
         methods_by_pmid=methods_by_pmid,
-        user_submitted_texts=user_submitted_texts,
     )
 
     # Compute hash of source abstracts
@@ -329,6 +325,15 @@ async def run_profile_pipeline(
         profile.profile_version = (profile.profile_version or 0) + 1
         profile.profile_generated_at = datetime.now(timezone.utc)
 
+    # Step 9b: Generate private profile seed (if no live profile and no existing seed)
+    if not profile.private_profile_md and not profile.private_profile_seed:
+        update_progress("step9b", "Generating agent instructions seed...")
+        try:
+            seed = await synthesize_private_profile(context_text, user.name)
+            profile.private_profile_seed = seed
+        except Exception as exc:
+            logger.error("Private profile seed generation failed for %s: %s", user.name, exc)
+
     await db.flush()
 
     # Export to markdown for agent consumption (include publications)
@@ -337,7 +342,25 @@ async def run_profile_pipeline(
         select(Publication).where(Publication.user_id == user.id)
     )
     user_pubs = pub_result.scalars().all()
-    export_profile_to_markdown(user, profile, publications=user_pubs)
+    exported_path = export_profile_to_markdown(user, profile, publications=user_pubs)
+
+    # Record revision
+    from src.models import AgentRegistry
+    from src.services.profile_versioning import create_revision
+    agent_result = await db.execute(
+        select(AgentRegistry).where(AgentRegistry.user_id == user.id)
+    )
+    agent_reg = agent_result.scalar_one_or_none()
+    if agent_reg and exported_path:
+        await create_revision(
+            db,
+            agent_registry_id=agent_reg.id,
+            profile_type="public",
+            content=exported_path.read_text(encoding="utf-8"),
+            mechanism="pipeline",
+            change_summary="Profile generated from ORCID + PubMed",
+        )
+        await db.flush()
 
     update_progress("complete", "Profile generation complete.")
     return profile
@@ -348,7 +371,6 @@ def _build_synthesis_context(
     grant_titles: list[str],
     publications: list[dict[str, Any]],
     methods_by_pmid: dict[str, str],
-    user_submitted_texts: list[dict[str, Any]],
 ) -> str:
     """Build the text context to pass to the LLM."""
     parts = []
@@ -390,15 +412,6 @@ def _build_synthesis_context(
         for pmid, methods in methods_by_pmid.items():
             parts.append(f"\n### Methods from PMID {pmid}")
             parts.append(methods[:2000])
-
-    # User-submitted texts
-    if user_submitted_texts:
-        parts.append("\n## User-Submitted Information")
-        for entry in user_submitted_texts:
-            label = entry.get("label", "Note")
-            content = entry.get("content", "")
-            parts.append(f"\n### {label}")
-            parts.append(content[:2000])
 
     return "\n".join(parts)
 
