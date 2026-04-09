@@ -56,3 +56,8 @@ class AgentState:
     pending_proposals: list[ProposalRef] = field(default_factory=list)
     last_selected: float = 0.0
     last_seen_cursor: float = 0.0  # for scanning new posts since last turn
+
+    # Phase 5 throttling (state-change gate + skip backoff)
+    consecutive_phase5_skips: int = 0
+    last_phase5_action_time: float = 0.0  # last time Phase 5 produced a real post
+    has_pi_directive: bool = False  # set when PI sends a message, cleared after Phase 5

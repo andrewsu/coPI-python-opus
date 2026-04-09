@@ -293,7 +293,11 @@ class SimulationEngine:
     # ------------------------------------------------------------------
 
     def _select_agent(self) -> Agent | None:
-        """Weighted random selection: P(agent) ∝ (now - agent.last_selected)."""
+        """Weighted random selection: P(agent) ∝ (now - agent.last_selected).
+
+        Agents with consecutive Phase 5 skips get a weight penalty:
+        weight is divided by 2^(skips - 2) once skips >= 3.
+        """
         now = time.time()
         candidates = [
             a for a in self.agents.values()
@@ -302,7 +306,13 @@ class SimulationEngine:
         if not candidates:
             return None
 
-        weights = [max(now - a.state.last_selected, 1.0) for a in candidates]
+        weights = []
+        for a in candidates:
+            w = max(now - a.state.last_selected, 1.0)
+            skips = a.state.consecutive_phase5_skips
+            if skips >= 3:
+                w /= 2 ** (skips - 2)
+            weights.append(w)
         return random.choices(candidates, weights=weights, k=1)[0]
 
     # ------------------------------------------------------------------
@@ -311,6 +321,7 @@ class SimulationEngine:
 
     async def _run_turn(self, agent: Agent) -> bool:
         """Run all 5 phases for a single agent turn. Returns True if work was done."""
+        settings = get_settings()
         api_calls_before = agent.api_call_count
 
         # Phase 1: Channel discovery
@@ -325,8 +336,40 @@ class SimulationEngine:
         # Phase 4: Reply to active threads (parallel)
         phase4_thread_ids = await self._phase4_reply_threads(agent)
 
-        # Phase 5: Start new thread (conditional)
-        await self._phase5_new_post(agent, phase4_thread_ids)
+        # Phase 4 activity resets skip backoff — agent is actively engaged
+        if phase4_thread_ids:
+            agent.state.consecutive_phase5_skips = 0
+            agent.state.last_phase5_action_time = time.time()
+
+        # State-change gate: skip Phase 5 (no LLM call) unless there's
+        # new actionable state or the spontaneous post timer has expired.
+        phase2_ran = agent.api_call_count > api_calls_before
+        has_interesting = len(agent.state.interesting_posts) > 0
+        has_phase4_work = len(phase4_thread_ids) > 0
+        has_pi = agent.state.has_pi_directive
+
+        # Spontaneous post timer — allow one Phase 5 call after enough
+        # idle time so agents can organically start new conversations.
+        base_interval = settings.phase5_spontaneous_interval * 60  # to seconds
+        skips = agent.state.consecutive_phase5_skips
+        stretch = min(max(skips, 1), settings.phase5_spontaneous_interval_max_multiplier)
+        spontaneous_interval = base_interval * stretch
+        since_last_action = time.time() - agent.state.last_phase5_action_time
+        spontaneous_ready = since_last_action >= spontaneous_interval
+
+        has_new_work = has_interesting or has_phase4_work or phase2_ran or has_pi
+
+        if has_new_work or spontaneous_ready:
+            await self._phase5_new_post(agent, phase4_thread_ids)
+        else:
+            logger.debug(
+                "[%s] Phase 5: Skipped (no state change, spontaneous in %ds)",
+                agent.agent_id,
+                int(spontaneous_interval - since_last_action),
+            )
+
+        # Clear PI directive flag after the turn
+        agent.state.has_pi_directive = False
 
         # Update cursor
         agent.state.last_seen_cursor = time.time()
@@ -954,12 +997,21 @@ class SimulationEngine:
 
             action = action_data.get("action", "new_post")
             if action == "skip":
-                logger.info("[%s] Phase 5: Agent chose to skip", agent.agent_id)
+                agent.state.consecutive_phase5_skips += 1
+                logger.info(
+                    "[%s] Phase 5: Agent chose to skip (streak: %d)",
+                    agent.agent_id, agent.state.consecutive_phase5_skips,
+                )
                 return
 
             if not message_text:
                 logger.warning("[%s] Phase 5: No message text in response", agent.agent_id)
                 return
+
+            # Real action — reset skip backoff
+            agent.state.consecutive_phase5_skips = 0
+            agent.state.last_phase5_action_time = time.time()
+
             channel = action_data.get("channel", "general").lstrip("#")
             target_post_id = action_data.get("target_post_id")
             post_type = action_data.get("post_type", "")
@@ -1167,6 +1219,9 @@ class SimulationEngine:
 
                     # PI-specific handling — apply to all agents this PI controls
                     for pi_agent_id in pi_agent_ids:
+                      agent_obj = self.agents.get(pi_agent_id)
+                      if agent_obj:
+                          agent_obj.state.has_pi_directive = True
                       if not self._pi_handler:
                           continue
                       thread_ts = msg.get("thread_ts")
@@ -1286,6 +1341,7 @@ class SimulationEngine:
                         # Update working memory after PI interaction
                         agent = self.agents.get(agent_id)
                         if agent:
+                            agent.state.has_pi_directive = True
                             await self._update_agent_memory(
                                 agent, f"PI sent a DM: {text[:200]}"
                             )

@@ -282,8 +282,32 @@ The simulation runs a turn-based loop. Each turn, one agent is selected and runs
 
 - **No back-to-back LLM calls:** The simulation tracks the last agent to make an LLM call. If the same agent is selected again and no other agent has made an LLM call since, the turn is skipped with idle backoff. This prevents a single active agent from burning LLM calls repeatedly when all other agents are blocked.
 - **Idle backoff:** When turns produce no LLM calls (blocked agents, skips), the simulation delays between turns: 5s for the first 3 idle turns, 15s for turns 4-10, then 30s.
+- **Phase 5 state-change gate:** Phase 5 is skipped without an LLM call unless the agent has new actionable state (see §5.5).
+- **Per-agent skip backoff:** When Phase 5 does run but the agent chooses to skip, consecutive skips reduce the agent's selection weight and extend the interval before the next spontaneous turn (see §5.5).
 
-### 5.5 Proposal Blocking and Phase 5 Restrictions
+### 5.5 Phase 5 Throttling: State-Change Gate and Skip Backoff
+
+When multiple agents have nothing actionable to do, the simulation can waste expensive Opus LLM calls on Phase 5 turns that predictably return "skip." Two agents alternating turns can bypass the back-to-back guard (§5.4) because each is technically a different caller. The state-change gate and skip backoff work together to eliminate this waste while preserving agents' ability to spontaneously start new conversations.
+
+**State-change gate.** Before running Phase 5, the engine checks whether anything has changed since the agent's last turn that would give it something new to act on. Phase 5 is skipped (no LLM call) unless at least one of:
+
+- The agent has interesting posts to reply to (populated by Phase 2)
+- The agent replied to threads in Phase 4 (indicating an active turn)
+- Phase 2 made an LLM call this turn (new posts were evaluated)
+- The agent received a PI directive since its last turn
+
+If none of these conditions are met and the spontaneous post timer (below) has not expired, Phase 5 is skipped entirely.
+
+**Spontaneous post timer.** To preserve organic conversation initiation, the gate allows one Phase 5 LLM call when it has been more than `phase5_spontaneous_interval` minutes (default: 20) since the agent last took a real Phase 5 action (posted a message, replied to a post — not a skip). This lets agents periodically propose new topics even when no external stimulus has arrived.
+
+**Per-agent skip backoff.** When a Phase 5 call (including a spontaneous one) results in the agent choosing "skip," the agent's `consecutive_skips` counter increments. This has two effects:
+
+1. **Selection weight penalty:** The agent's selection weight is divided by `2^(consecutive_skips - 2)` once `consecutive_skips >= 3` (e.g., 3 skips = ½ weight, 4 = ¼, 5 = ⅛). This makes agents with nothing to do progressively less likely to be selected.
+2. **Spontaneous interval stretch:** The spontaneous post timer is multiplied by `consecutive_skips` (e.g., at 3 skips, the agent waits 60 min instead of 20 min before its next spontaneous attempt). Capped at 5× the base interval.
+
+The counter resets to 0 whenever the agent takes a real action in Phase 4 or Phase 5 (posts a message, replies to a thread).
+
+### 5.6 Proposal Blocking and Phase 5 Restrictions
 
 Agents with unreviewed proposals are **blocked** from starting new non-funding conversations:
 
@@ -291,7 +315,7 @@ Agents with unreviewed proposals are **blocked** from starting new non-funding c
 - **Funding actions bypass blocking:** blocked agents can still reply to :moneybag: funding posts and start funding collaborations
 - **Funding-only prompt:** When a blocked agent enters Phase 5, the prompt is stripped to show only funding options (reply to funding post, start funding collab, or skip). The new-post option and subscribed channel list are removed entirely, preventing the LLM from proposing actions that will be rejected.
 
-### 5.6 Deduplication: Prior Conversation Context
+### 5.7 Deduplication: Prior Conversation Context
 
 To prevent agents from re-pitching the same collaboration, the Phase 5 prompt includes structured summaries of all prior conversations with other labs:
 
@@ -301,7 +325,7 @@ To prevent agents from re-pitching the same collaboration, the Phase 5 prompt in
 
 In addition, the agent's own last 10 top-level posts (150-char snippets) are shown with instructions not to repeat topics.
 
-### 5.7 Response Decision Logic
+### 5.8 Response Decision Logic
 
 Not every agent should respond to every message. The LLM decides, but the system prompt should guide this:
 - Respond if the message is directly relevant to your lab's expertise
@@ -310,7 +334,7 @@ Not every agent should respond to every message. The LLM decides, but the system
 - Don't respond just to be polite or to repeat what another agent said
 - Don't respond if you have nothing substantive to add
 
-### 5.8 Concurrency and Ordering
+### 5.9 Concurrency and Ordering
 
 - Agents take turns (one agent per turn in the main loop)
 - Phase 4 thread replies within a single turn can run in parallel
@@ -523,7 +547,7 @@ Each agent turn runs through five phases:
 - Conditionally start a new thread or reply to an interesting post
 - Subject to: daily post cap, active thread threshold, proposal blocking, random skip probability
 - Options: reply to an interesting post, start a funding collaboration, make a new top-level post (:newspaper: Paper, :bulb: Idea, :wave: Introduction, :sos: Help Wanted), or skip
-- Prior conversation context included for deduplication (see §5.6)
+- Prior conversation context included for deduplication (see §5.7)
 
 ### 7.3 Context Window Management
 
