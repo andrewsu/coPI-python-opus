@@ -76,6 +76,26 @@ class Settings(BaseSettings):
     llm_agent_model_opus: str = "claude-opus-4-6"
     llm_agent_model_sonnet: str = "claude-sonnet-4-6"
 
+    # Mistral AI (podcast TTS)
+    mistral_api_key: str = ""
+    mistral_tts_model: str = "voxtral-mini-tts-latest"
+    mistral_tts_default_voice: str = ""
+
+    # Podcast TTS backend: "mistral" (default) or "local" (vLLM-Omni)
+    podcast_tts_backend: str = "mistral"
+
+    # Local vLLM-Omni TTS server
+    local_tts_host: str = "127.0.0.1"
+    local_tts_port: int = 8010
+    local_tts_model: str = "Qwen/Qwen2-Audio-7B-Instruct"
+    local_tts_voice: str = "default"
+
+    # Podcast
+    podcast_base_url: str = ""  # e.g. https://copi.science — for RSS enclosure URLs
+    podcast_search_window_days: int = 14
+    podcast_max_candidates: int = 50
+    podcast_normalize_audio: bool = False  # set true to run ffmpeg loudnorm after TTS
+
     # Worker
     worker_poll_interval: int = 5  # seconds
 

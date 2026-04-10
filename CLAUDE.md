@@ -42,3 +42,26 @@ docker compose --profile agent run -d --name agent-run agent python -m src.agent
 ```
 
 **Note:** The agent-run container uses mounted source code but the Python process only loads modules at startup. Code changes require a container restart to take effect.
+
+## Podcast Pipeline
+
+The LabBot Podcast pipeline (specs/labbot-podcast.md) runs daily at 9am UTC for each active agent:
+
+1. Build PubMed queries from lab's public profile
+2. Fetch candidates from PubMed + bioRxiv + medRxiv + arXiv (last 14 days, up to 50+10 candidates)
+3. Claude Sonnet selects most relevant paper (applying PI's podcast preferences from their private ProfileRevision)
+4. Claude Opus writes a ~250-word structured brief
+5. TTS audio generated (Mistral or local vLLM-Omni); ffmpeg loudnorm applied if PODCAST_NORMALIZE_AUDIO=true
+6. Slack DM sent to PI with text summary + RSS link
+7. RSS feed available at `/podcast/{agent_id}/feed.xml`
+8. Audio served at `/podcast/{agent_id}/audio/{date}.mp3`
+
+Preprint IDs use prefixed format: `biorxiv:...`, `medrxiv:...`, `arxiv:...`. The `paper_url` in summaries links to the correct server (not always PubMed).
+
+```bash
+# Run podcast pipeline once for all active agents
+docker compose --profile podcast run --rm podcast python -m src.podcast.main
+
+# Test pipeline for 'su' agent only
+docker compose exec app python scripts/test_podcast_su.py
+```
