@@ -930,7 +930,10 @@ class SimulationEngine:
             self.message_log.is_funding_thread(p.post_id)
             for p in agent.state.interesting_posts
         )
-        if not available_posts and blocked_for_regular and not has_funding_interesting:
+        has_thread_foas = any(
+            ts.foa_number for ts in agent.state.active_threads.values()
+        )
+        if not available_posts and blocked_for_regular and not has_funding_interesting and not has_thread_foas:
             logger.debug("[%s] Phase 5: Skipped (blocked, no funding/PI posts available)", agent.agent_id)
             return
 
